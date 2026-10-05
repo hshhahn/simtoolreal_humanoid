@@ -27,3 +27,24 @@ Passed:
 The target Slurm cluster has not been tested from this workstation. Submit
 slurm/verify.sbatch on that cluster before a long training job. These checks
 verify installation and execution; they do not demonstrate learned grasping.
+
+Parallel-gripper baseline, 2026-10-05:
+- Configuration parity with the original SimToolReal reset/goal sampling,
+  reward, termination, physics, randomization, observation layout, viewer,
+  and scene settings. Worker count is overridden by the launcher.
+- Original KUKA base/start joints, arm gains, narrow table and table height.
+- 32 environments for 1,200 steps: finite observations/rewards, 8 policy
+  actions / 9 physical joints, 71D actor / 90D critic, shared jaw targets,
+  and the inherited ten-step goal-success signal.
+- Scripted grasp/lift with collisions enabled: both marker instances held
+  for 120 steps, ending at object heights 0.729/0.733 m. Diagnostic fixed
+  poses and disabled randomization are confined to the capability test.
+- Original pretrained arm observation/action regression: four environments,
+  140D observations / 29 actions, reset and five random steps finite.
+- Fresh LSTM training at 2,048 environments: 112 checkpoint tensors finite
+  at iteration 100; reward, PPO losses and other training scalars finite
+  through the launch health check at iteration 479. Two early samples of
+  the original auxiliary off/on-policy gradient-comparison diagnostic were
+  undefined; that diagnostic does not enter the PPO update.
+- The 40,000-iteration baseline run is ongoing. These launch checks do not
+  demonstrate learned grasping.

@@ -12,6 +12,7 @@ __pycache__/
 models/
 third_party/
 g1_wuji_runs/
+kuka_gripper_runs/
 slurm_logs/
 visualizations/
 outputs/

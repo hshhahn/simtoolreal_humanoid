@@ -1,0 +1,25 @@
+{
+  "arm_source": "assets/urdf/kuka_sharpa_description/iiwa14_left_sharpa_adjusted_restricted.urdf",
+  "arm_joints": 7,
+  "gripper_joints": 2,
+  "policy_actions": 8,
+  "gripper": "Parametric simulation parallel-jaw gripper; no specific hardware model",
+  "opening_range_m": [
+    0,
+    0.1
+  ],
+  "finger_travel_m": [
+    0,
+    0.05
+  ],
+  "finger_length_m": 0.08,
+  "pad_size_m": [
+    0.004,
+    0.025,
+    0.04
+  ],
+  "per_jaw_effort_limit_N": 40,
+  "per_jaw_velocity_limit_m_s": 0.2,
+  "control": "One shared opening target drives both prismatic joints",
+  "mount": "Simulation flange adapter at +Z 0.12 m, RPY=(pi/2,-pi/2,0); hardware calibration not provided"
+}

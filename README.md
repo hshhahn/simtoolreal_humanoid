@@ -2,7 +2,7 @@
 
 This repository contains our modified [SimToolReal](https://github.com/tylerlum/simtoolreal) environment for a free-standing Unitree G1 with two original Wuji hands. PPO predicts a frozen SONIC 1.1 controller's latent command and three right-hand commands jointly. Both feed-forward and LSTM policies are included.
 
-The current training task is marker lifting over a lowered table. This is an experimental environment and controller integration; the existing training trials have not demonstrated successful sustained grasping. Robot assets, environment code, agent configurations, and setup scripts are included. SONIC weights are downloaded from their pinned upstream revision during setup.
+The humanoid task is marker lifting over a lowered table. This is an experimental environment and controller integration; the existing humanoid training trials have not demonstrated successful sustained grasping. A fixed-KUKA parallel-gripper LSTM baseline uses the same two-marker asset pool with the original SimToolReal scene settings. Robot assets, environment code, agent configurations, and setup scripts are included. SONIC weights are downloaded from their pinned upstream revision during humanoid setup.
 
 ## Installation
 
@@ -56,7 +56,7 @@ The standing reference is encoded with the released SONIC encoder and used to in
 
 The task retains SimToolReal's fingertip approach, lift shaping, one-shot lift bonus, object keypoint progress, goal reward, and hand velocity penalty. The humanoid body velocity penalty uses coefficient 0.002, with added fall and latent-change penalties. There is no upright reward. Falls and invalid physics terminate the affected environment.
 
-Objects use the existing eight-corner bounding-box goal formulation. The marker box is `(0.141, 0.03025, 0.0271)` metres; keypoint scale 1.5 and position tolerance 0.075 produce an effective 0.1125 m threshold. Success requires ten accumulated qualifying steps. The lift reward alone does not establish a grasp and can reward tossing an object.
+Objects use the existing four selected bounding-box corners for the goal formulation. The marker box is `(0.141, 0.03025, 0.0271)` metres; keypoint scale 1.5 and position tolerance 0.075 produce an effective 0.1125 m threshold. Success requires ten accumulated qualifying steps. The lift reward alone does not establish a grasp and can reward tossing an object.
 
 The complete settings are in [env_cfg.py](simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env_cfg.py), [env.py](simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env.py), and the inherited [SimToolReal configuration](simtoolreal/isaacsimenvs/tasks/simtoolreal/simtoolreal_env_cfg.py). The full object distribution remains available as `Isaacsimenvs-G1-Wuji-Sonic-v0`.
 
@@ -94,6 +94,39 @@ Each Hydra run directory contains the rl_games experiment subdirectory. Checkpoi
 source ./activate_simtoolreal.sh
 tensorboard --logdir ../g1_wuji_runs --host 127.0.0.1 --port 6006
 ```
+
+## KUKA parallel-gripper LSTM baseline
+
+`Isaacsimenvs-Kuka-Parallel-Gripper-Lift-v0` uses the original fixed KUKA iiwa14 arm with a parametric simulation gripper. The seven arm joints, original starting joint values, base at `(0, 0.8, 0)` metres, arm drive gains, and narrow table are retained. The table root is at `0.38 ± 0.01` m and its surface at `0.53 ± 0.01` m. Only the object pool is simplified to the two procedural marker instances.
+
+The task inherits the original randomized object resets, delta position/orientation goals, rewards, bounding-box keypoints, termination/curriculum, action smoothing, domain randomization, and 60 Hz control / 120 Hz physics. Its reward and termination functions are the original functions. The gripper has two opposing prismatic joints, driven by one shared command, with a 0–100 mm opening. Its adapter and box/pad geometry are simulation estimates, not a specific commercial gripper model.
+
+The policy predicts seven arm velocity-delta commands and one normalized jaw-opening command. Actor/critic observations have 71/90 values. The original baseline network is a 1024-unit, one-layer LSTM followed by an ELU MLP with `[1024, 1024, 512, 512]` units; the asymmetric critic is feed-forward. Sequence length is 16. The launcher uses 2,048 environments and scales minibatches to preserve four minibatches per rollout. These settings require no SONIC model files.
+
+For a fresh checkout, install the base environment with `./setup_simtoolreal.sh`. Then verify and train on an allocated GPU:
+
+```bash
+source ./activate_simtoolreal.sh
+python isaacsimenvs/tests/test_kuka_parallel_gripper.py \
+  --num_envs 32 --steps 1200 --headless
+python isaacsimenvs/tests/test_kuka_parallel_grasp.py --headless
+cd ..
+
+./run_kuka_parallel_gripper_lstm_training.sh \
+  agent.params.config.max_epochs=40000 \
+  'hydra.run.dir=../kuka_gripper_runs/${now:%Y%m%d_%H%M%S}_lstm'
+```
+
+The second test follows a scripted grasp trajectory with fixed diagnostic poses and randomization disabled. Those diagnostic settings do not enter training; a passing test confirms physical grasp capability, not learned-policy success. The first test compares the task settings against the original SimToolReal configuration and verifies finite simulation, coupled jaw targets, and the goal-success signal.
+
+Checkpoints and TensorBoard events use the same `nn/`, `best/model.pth`, and `summaries/` layout inside each run's `0_kuka_parallel_gripper_lstm/` directory:
+
+```bash
+source ./activate_simtoolreal.sh
+tensorboard --logdir ../kuka_gripper_runs --host 127.0.0.1 --port 6007
+```
+
+To scale environment count, override both actor and critic minibatches. For example, use `env.scene.num_envs=4096 agent.params.config.minibatch_size=16384 agent.params.config.central_value_config.minibatch_size=16384`. The command can run directly within a Slurm GPU allocation; the existing `slurm/train.sbatch` is configured for the G1 comparison.
 
 ## Source and licenses
 

@@ -7,5 +7,6 @@ to expose all task ids to ``gym.make`` / ``gym.spec``.
 
 from . import simtoolreal  # side effect: gym.register("Isaacsimenvs-SimToolReal-Direct-v0", ...)
 from . import g1_wuji_sonic
+from . import kuka_parallel_gripper
 
-__all__ = ["simtoolreal", "g1_wuji_sonic"]
+__all__ = ["simtoolreal", "g1_wuji_sonic", "kuka_parallel_gripper"]

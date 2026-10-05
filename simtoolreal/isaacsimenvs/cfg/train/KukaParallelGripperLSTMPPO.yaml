@@ -1,0 +1,112 @@
+# Original SimToolReal LSTM baseline; one shared parallel-jaw command.
+# Defaults use 2048 environments and four minibatches per rollout.
+params:
+  seed: 42
+  env:
+    clip_observations: 10.0
+    clip_actions: 1.0
+  algo:
+    name: a2c_continuous
+  model:
+    name: continuous_a2c_logstd
+  network:
+    name: actor_critic
+    separate: false
+    space:
+      continuous:
+        mu_activation: None
+        sigma_activation: None
+        mu_init:
+          name: default
+        sigma_init:
+          name: const_initializer
+          val: 0
+        fixed_sigma: fixed
+    mlp:
+      units:
+      - 1024
+      - 1024
+      - 512
+      - 512
+      activation: elu
+      d2rl: false
+      initializer:
+        name: default
+      regularizer:
+        name: None
+    rnn:
+      name: lstm
+      units: 1024
+      layers: 1
+      before_mlp: true
+      layer_norm: true
+  load_checkpoint: false
+  load_path: ''
+  config:
+    name: 0_kuka_parallel_gripper_lstm
+    full_experiment_name: ${.name}
+    env_name: rlgpu
+    device: cuda:0
+    device_name: cuda:0
+    multi_gpu: false
+    ppo: true
+    mixed_precision: true
+    normalize_input: true
+    normalize_value: true
+    value_bootstrap: true
+    normalize_advantage: true
+    reward_shaper:
+      scale_value: 0.01
+    num_actors: ${....env.scene.num_envs}
+    gamma: 0.99
+    tau: 0.95
+    learning_rate: 1e-4
+    lr_schedule: adaptive
+    schedule_type: standard
+    kl_threshold: 0.016
+    score_to_win: 1000000
+    max_epochs: 40000
+    save_best_after: 100
+    save_frequency: 100
+    print_stats: true
+    grad_norm: 1.0
+    entropy_coef: 0.0
+    truncate_grads: true
+    e_clip: 0.1
+    minibatch_size: 8192
+    mini_epochs: 2
+    critic_coef: 4.0
+    clip_value: true
+    horizon_length: 16
+    seq_length: 16
+    bounds_loss_coef: 0.0001
+    central_value_config:
+      minibatch_size: 8192
+      mini_epochs: 2
+      learning_rate: 1e-4
+      kl_threshold: 0.016
+      clip_value: true
+      normalize_input: true
+      truncate_grads: true
+      network:
+        name: actor_critic
+        central_value: true
+        mlp:
+          units:
+          - 1024
+          - 1024
+          - 512
+          - 512
+          activation: elu
+          d2rl: false
+          initializer:
+            name: default
+          regularizer:
+            name: None
+    expl_type: none
+    use_others_experience: none
+    player:
+      deterministic: false
+      games_num: 100000
+      print_stats: false
+    zero_rnn_on_done: true

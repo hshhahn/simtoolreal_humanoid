@@ -254,7 +254,7 @@ def build_observations(env) -> dict[str, torch.Tensor]:
         ft_body_pos_w,
         ft_body_rot_w,
         getattr(env, "fingertip_offset", FINGERTIP_OFFSET),
-        (env.num_envs, NUM_FINGERTIPS),
+        (env.num_envs, len(env._fingertip_body_ids)),
     )
 
     obj_pos = env.object.data.root_pos_w - env_origins

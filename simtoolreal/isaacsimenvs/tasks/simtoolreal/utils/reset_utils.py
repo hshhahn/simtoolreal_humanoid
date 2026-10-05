@@ -23,6 +23,7 @@ from .scene_utils import (
 def allocate_state_buffers(
     env, *, joint_names=None, arm_joint_names=None, hand_joint_names=None,
     palm_body_name=None, fingertip_body_names=None,
+    num_fingertips: int = NUM_FINGERTIPS, action_buffer_size: int | None = None,
 ) -> None:
     """Populate every per-env buffer + index cache used by the hooks.
 
@@ -40,7 +41,7 @@ def allocate_state_buffers(
     env._fingertip_body_ids = env.robot.find_bodies(
         fingertip_body_names or FINGERTIP_BODY_REGEX, preserve_order=True,
     )[0]
-    assert len(env._fingertip_body_ids) == NUM_FINGERTIPS
+    assert len(env._fingertip_body_ids) == num_fingertips
 
     # Convert between Lab parser order and canonical policy order.
     lab_names = list(env.robot.data.joint_names)
@@ -71,7 +72,7 @@ def allocate_state_buffers(
     env._hand_upper = limits[:, env._hand_joint_ids, 1]
 
     # --- Action target buffers  ---
-    action_space = env.cfg.action_space
+    action_space = env.cfg.action_space if action_buffer_size is None else action_buffer_size
     env._cur_targets = torch.zeros(env.num_envs, env.robot.num_joints, device=env.device)
     env._prev_targets = torch.zeros_like(env._cur_targets)
 
@@ -108,7 +109,7 @@ def allocate_state_buffers(
     )
     # the minimum distance between a fingertip and the object since the last goal reset
     env._closest_fingertip_dist = torch.full(
-        (env.num_envs, NUM_FINGERTIPS), -1.0, device=env.device
+        (env.num_envs, num_fingertips), -1.0, device=env.device
     )
     # the number of succeesses in the current episode
     env._successes = torch.zeros(
@@ -172,7 +173,7 @@ def allocate_state_buffers(
     # --- Step-shared caches populated by compute_intermediate_values (Phase F) ---
     env._keypoints_max_dist = torch.zeros(env.num_envs, device=env.device)
     env._curr_fingertip_distances = torch.zeros(
-        env.num_envs, NUM_FINGERTIPS, device=env.device
+        env.num_envs, num_fingertips, device=env.device
     )
     env._near_goal = torch.zeros(
         env.num_envs, dtype=torch.bool, device=env.device
