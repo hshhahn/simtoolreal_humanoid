@@ -128,6 +128,24 @@ tensorboard --logdir ../kuka_gripper_runs --host 127.0.0.1 --port 6007
 
 To scale environment count, override both actor and critic minibatches. For example, use `env.scene.num_envs=4096 agent.params.config.minibatch_size=16384 agent.params.config.central_value_config.minibatch_size=16384`. The command can run directly within a Slurm GPU allocation; the existing `slurm/train.sbatch` is configured for the G1 comparison.
 
+## Wuji marker grasp capability
+
+The current three hand commands can physically grasp both procedural markers. A controlled-wrist diagnostic demonstrated a 15 cm wrist lift, five seconds of object retention above 10 cm, and release on opening. An open-hand control retained neither marker. This establishes finger-control capability at suitable wrist poses; it does not demonstrate grasping by the SONIC/PPO policy.
+
+The diagnostic uses the production right-hand meshes, collisions, joint limits, actuator settings, friction setup, and three-command mapping. A driven Cartesian wrist fixture isolates the hand from humanoid balance and SONIC. Its six positioning joints are diagnostic equipment; the training policy remains 64 SONIC commands plus three hand commands. A six-command comparison can independently bend each non-thumb finger, but is not enabled in training.
+
+Replay the saved successful wrist poses on an allocated GPU:
+
+```bash
+source ./activate_simtoolreal.sh
+python isaacsimenvs/tests/test_wuji_marker_grasp.py --headless \
+  --mode 3 --batches 1 \
+  --candidate-file isaacsimenvs/tests/data/wuji_marker_grasp_3dof.json \
+  --output ../visualizations/wuji_marker_capability/replay
+```
+
+Results and recorded physical poses are written to the output directory. `report.json` records `verified_hand_dof`, successful grasps per marker, hold/release criteria, and the open-hand control. A process exit code of zero alone does not mean a grasp was found; `verified_hand_dof` must be `3`. Omitting the candidate file performs a pose/closure search; `--mode auto` tests three commands first and searches with six only if that search does not pass both markers.
+
 ## Source and licenses
 
 The modified upstream base is recorded in [SOURCE_PROVENANCE.json](SOURCE_PROVENANCE.json). [environment-reference.json](environment-reference.json) records the packages in the original working environment; selected installation constraints are in [isaacsim-constraints.txt](isaacsim-constraints.txt). The setup uses documented dependency overrides required by that working stack rather than installing the root package's legacy Isaac Gym dependencies.

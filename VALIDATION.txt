@@ -48,3 +48,20 @@ Parallel-gripper baseline, 2026-10-05:
   undefined; that diagnostic does not enter the PPO update.
 - The 40,000-iteration baseline run is ongoing. These launch checks do not
   demonstrate learned grasping.
+
+Wuji hand capability diagnostic, 2026-10-05:
+- Production three-command mapping, right-hand geometry, joint limits,
+  actuator parameters, friction setup, self-collisions and 200 Hz physics.
+  A driven wrist fixture isolates finger control from SONIC and balance.
+- Controlled sweep of 137 wrist/closure candidates per marker: 11 successful
+  grasps for the 17 mm marker and 60 for the 28 mm marker. Each required
+  a 15 cm wrist lift, object retention above 10 cm for five seconds,
+  final object speed below 0.15 m/s, and a drop above 8 cm after opening.
+- All-open hand controls: zero successes on both markers.
+- Saved witness replay at four environments: one successful candidate for
+  the thin marker, two for the thick marker; all-open controls again zero.
+- Six-command comparison also found physical grasps for both markers.
+  Independent finger control is not required for the demonstrated grasps.
+- Training hand commands, SONIC action space, networks and rewards remain
+  unchanged. These checks establish physical capability at controlled
+  wrist poses, not learned humanoid manipulation or a policy success rate.
