@@ -46,8 +46,8 @@ Parallel-gripper baseline, 2026-10-05:
   through the launch health check at iteration 479. Two early samples of
   the original auxiliary off/on-policy gradient-comparison diagnostic were
   undefined; that diagnostic does not enter the PPO update.
-- The 40,000-iteration baseline run is ongoing. These launch checks do not
-  demonstrate learned grasping.
+- The PPO baseline was stopped at iteration 27,117 to switch to SAPG.
+  These launch checks do not demonstrate learned grasping.
 
 Wuji hand capability diagnostic, 2026-10-05:
 - Production three-command mapping, right-hand geometry, joint limits,
@@ -79,5 +79,27 @@ G1 manipulation motion penalty update, 2026-10-05:
   isolated fall/reset and 1e11 rad/s physics-fault recovery all passed.
 - Original KUKA reward and every component exactly unchanged across
   256 randomized CPU cases; existing physics-guard tests passed (3 tests).
-- The existing KUKA training continues. These checks do not establish
+- These checks did not alter KUKA training. They do not establish
   improved learned grasping with the updated G1 penalty.
+
+KUKA SAPG launch verification, 2026-10-05:
+- Task SAPG entry point reuses upstream SimToolRealSAPG.yaml directly.
+- Actor LSTM 1024 + MLP [1024,1024,512,512]; asymmetric feed-forward critic
+  MLP [1024,1024,512,512], coefficient-conditioned variance, entropy
+  exploration, and leader/follower experience sharing.
+- Six exploration groups: 96 environments / block 16 for three iterations;
+  all 26 actor and 17 asymmetric critic checkpoint tensors finite.
+- Capacity test: 6,144 environments / block 1,024 for four iterations;
+  both actor and critic minibatches 24,576. Completed without an error;
+  checkpoint weights finite, peak resident memory 15,677,216 KiB and
+  wall time 46.94 seconds.
+- Full-run saved configuration matches upstream network and SAPG settings.
+  The same two markers, reset, action, reward, termination, randomization,
+  and physics settings are retained from the preceding PPO experiment.
+- Full 24,576-environment / block 4,096 training started successfully.
+  Epoch-10 checkpoint: 26 actor and 17 asymmetric critic tensors finite;
+  six action-variance heads with eight actions per head. Core training
+  scalars finite through iteration 59, entropy metrics present for all six
+  exploration groups, checkpoint and pose-viewer HTML written.
+- Launch script passes bash syntax checks; repository diff has no
+  whitespace errors. These checks do not establish learned grasping.

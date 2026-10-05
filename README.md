@@ -99,7 +99,9 @@ tensorboard --logdir ../g1_wuji_runs --host 127.0.0.1 --port 6006
 
 `Isaacsimenvs-Kuka-Parallel-Gripper-Lift-v0` uses the original fixed KUKA iiwa14 arm with a parametric simulation gripper. The seven arm joints, original starting joint values, base at `(0, 0.8, 0)` metres, arm drive gains, and narrow table are retained. The table root is at `0.38 ± 0.01` m and its surface at `0.53 ± 0.01` m. Only the object pool is simplified to the two procedural marker instances.
 
-The task inherits the original randomized object resets, delta position/orientation goals, rewards, bounding-box keypoints, termination/curriculum, action smoothing, domain randomization, and 60 Hz control / 120 Hz physics. Its reward and termination functions are the original functions. The gripper has two opposing prismatic joints, driven by one shared command, with a 0–100 mm opening. Its adapter and box/pad geometry are simulation estimates, not a specific commercial gripper model.
+The task inherits the upstream Isaac Sim port's randomized resets, goal sampling, rewards, bounding-box keypoints, termination/curriculum, action smoothing, domain randomization, and 60 Hz control / 120 Hz physics. Full resets sample absolute goals; later goal changes use delta position/orientation goals. The gripper has two opposing prismatic joints, driven by one shared command, with a 0–100 mm opening. Its adapter and box/pad geometry are simulation estimates, not a specific commercial gripper model.
+
+Reward formulas and coefficients match the legacy Isaac Gym implementation for identical inputs. The gripper supplies two pad distances instead of five fingertip distances, and two prismatic hand velocities instead of 22 angular hand velocities. The upstream Isaac Sim port also includes object spawn-height noise in the lift reference, while Isaac Gym excludes it; with the inherited reset distribution the reference differs by up to 2 cm. These adaptations mean the experiment is not an exact reproduction of the original robot's reward magnitudes or physics.
 
 The policy predicts seven arm velocity-delta commands and one normalized jaw-opening command. Actor/critic observations have 71/90 values. The original baseline network is a 1024-unit, one-layer LSTM followed by an ELU MLP with `[1024, 1024, 512, 512]` units; the asymmetric critic is feed-forward. Sequence length is 16. The launcher uses 2,048 environments and scales minibatches to preserve four minibatches per rollout. These settings require no SONIC model files.
 
@@ -127,6 +129,26 @@ tensorboard --logdir ../kuka_gripper_runs --host 127.0.0.1 --port 6007
 ```
 
 To scale environment count, override both actor and critic minibatches. For example, use `env.scene.num_envs=4096 agent.params.config.minibatch_size=16384 agent.params.config.central_value_config.minibatch_size=16384`. The command can run directly within a Slurm GPU allocation; the existing `slurm/train.sbatch` is configured for the G1 comparison.
+
+For the upstream SAPG training recommendation, use:
+
+```bash
+./run_kuka_parallel_gripper_sapg_training.sh \
+  'hydra.run.dir=../kuka_gripper_runs/${now:%Y%m%d_%H%M%S}_sapg'
+```
+
+This launcher reuses `simtoolreal/isaacsimenvs/cfg/train/SimToolRealSAPG.yaml` through the task's `rl_games_sapg_cfg_entry_point`. It starts a fresh policy with a 1024-unit LSTM and `[1024, 1024, 512, 512]` actor MLP, a separate feed-forward asymmetric critic with the same MLP widths, six exploration groups, coefficient-conditioned action variance, entropy exploration rewards, and leader/follower experience sharing. The defaults are 24,576 environments, 4,096 environments per group, 98,304-transition actor/critic minibatches, 16-step rollouts, two PPO passes, and a 40,000-iteration limit. Pose viewers are captured without enabling cameras. Checkpoints and events use the `0_kuka_parallel_gripper_sapg/nn/` and `0_kuka_parallel_gripper_sapg/summaries/` directories under the run.
+
+When RAM or GPU memory requires a smaller run, scale the environment count, exploration block, and both minibatches together while keeping six groups. For example:
+
+```bash
+./run_kuka_parallel_gripper_sapg_training.sh \
+  env.scene.num_envs=6144 \
+  agent.params.config.expl_coef_block_size=1024 \
+  agent.params.config.minibatch_size=24576 \
+  agent.params.config.central_value_config.minibatch_size=24576 \
+  'hydra.run.dir=../kuka_gripper_runs/${now:%Y%m%d_%H%M%S}_sapg'
+```
 
 ## Wuji marker grasp capability
 
