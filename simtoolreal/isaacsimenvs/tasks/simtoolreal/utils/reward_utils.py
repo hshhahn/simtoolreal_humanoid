@@ -124,8 +124,8 @@ def compute_rewards(env) -> torch.Tensor:
 
     kuka_pen, hand_pen = action_penalty(
         joint_vel=env.robot.data.joint_vel,
-        arm_ids=env._arm_joint_ids,
-        hand_ids=env._hand_joint_ids,
+        arm_ids=getattr(env, "_reward_arm_joint_ids", env._arm_joint_ids),
+        hand_ids=getattr(env, "_reward_hand_joint_ids", env._hand_joint_ids),
         kuka_scale=rew_cfg.kuka_actions_penalty_scale,
         hand_scale=rew_cfg.hand_actions_penalty_scale,
     )

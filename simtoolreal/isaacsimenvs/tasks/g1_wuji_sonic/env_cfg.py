@@ -54,7 +54,9 @@ class SonicCfg:
     maximum_tilt_degrees: float = 60.0
     maximum_base_distance: float = 1.5
     fall_penalty: float = 5.0
-    latent_rate_penalty: float = 0.01
+    # Default motion penalty matches SimToolReal's physical joint velocities.
+    # Retain this optional setting for reproducing older latent-penalty runs.
+    latent_rate_penalty: float = 0.0
     # Speeds this far above hardware limits indicate a numerical physics failure.
     physics_velocity_limit_multiplier: float = 10.0
     physics_failure_penalty: float = 5.0
@@ -124,7 +126,7 @@ class G1WujiSonicEnvCfg(SimToolRealEnvCfg):
         target_volume_mins=(-0.30, 0.14, 0.55),
         target_volume_maxs=(0.30, 0.40, 0.85),
     )
-    reward: RewardCfg = RewardCfg(kuka_actions_penalty_scale=0.002)
+    reward: RewardCfg = RewardCfg()
     termination: TerminationCfg = TerminationCfg(episode_length=500)
     # Task randomization remains active for objects. Keep timing deterministic
     # during controller bring-up; latency can be enabled after verification.

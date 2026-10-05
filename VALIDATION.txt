@@ -62,6 +62,22 @@ Wuji hand capability diagnostic, 2026-10-05:
   the thin marker, two for the thick marker; all-open controls again zero.
 - Six-command comparison also found physical grasps for both markers.
   Independent finger control is not required for the demonstrated grasps.
-- Training hand commands, SONIC action space, networks and rewards remain
-  unchanged. These checks establish physical capability at controlled
+- The capability diagnostic did not modify training hand commands, SONIC
+  action space, networks or rewards. It establishes capability at controlled
   wrist poses, not learned humanoid manipulation or a policy success rate.
+
+G1 manipulation motion penalty update, 2026-10-05:
+- Original SimToolReal L1 measured joint-velocity penalties and weights:
+  0.03 for the seven right-arm joints, 0.003 for all 20 right Wuji joints.
+  Latent-change penalty disabled by default; balance joints excluded.
+- Injected known joint velocities into four simulated G1 environments:
+  exact arm/hand penalties, with non-task joints moving and maximum latent
+  changes contributing no default penalty. The 29-joint controller mapping
+  and 67-dimensional policy action remain intact.
+- Four marker environments for 500 steps: finite states and rewards, zero
+  standing falls, reward component accounting, FSQ decoder boundary,
+  isolated fall/reset and 1e11 rad/s physics-fault recovery all passed.
+- Original KUKA reward and every component exactly unchanged across
+  256 randomized CPU cases; existing physics-guard tests passed (3 tests).
+- The existing KUKA training continues. These checks do not establish
+  improved learned grasping with the updated G1 penalty.

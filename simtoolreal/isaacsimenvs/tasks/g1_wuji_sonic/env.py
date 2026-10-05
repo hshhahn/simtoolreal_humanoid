@@ -36,6 +36,7 @@ from .env_cfg import EXTRA_OBS_SIZES, G1WujiSonicEnvCfg
 from .robot import (
     ALL_JOINT_NAMES,
     BODY_JOINT_NAMES,
+    RIGHT_ARM_NAMES,
     LEFT_HAND_NAMES,
     RIGHT_HAND_NAMES,
     FINGERTIP_NAMES,
@@ -111,6 +112,12 @@ class G1WujiSonicEnv(SimToolRealEnv):
         self._body_joint_ids = self.robot.find_joints(
             list(BODY_JOINT_NAMES), preserve_order=True
         )[0]
+        # SimToolReal penalizes the task arm and hand, not balance joints.
+        # Keep the 29-joint body control/observation mapping independent.
+        self._reward_arm_joint_ids = self.robot.find_joints(
+            list(RIGHT_ARM_NAMES), preserve_order=True
+        )[0]
+        self._reward_hand_joint_ids = self._hand_joint_ids
         self._left_hand_joint_ids = self.robot.find_joints(
             list(LEFT_HAND_NAMES), preserve_order=True
         )[0]

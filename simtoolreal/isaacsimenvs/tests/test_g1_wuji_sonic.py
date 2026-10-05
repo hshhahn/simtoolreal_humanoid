@@ -24,6 +24,8 @@ def main():
     import torch
     import isaacsimenvs
     from isaacsimenvs.tasks.g1_wuji_sonic.env_cfg import EXTRA_OBS_SIZES, G1WujiSonicEnvCfg
+    from isaacsimenvs.tasks.g1_wuji_sonic.robot import RIGHT_ARM_NAMES, RIGHT_HAND_NAMES
+    from isaacsimenvs.tasks.simtoolreal.simtoolreal_env_cfg import SimToolRealEnvCfg
     from isaacsimenvs.tasks.simtoolreal.utils.obs_utils import compute_obs_dim
     from isaaclab_tasks.utils import load_cfg_from_registry
     from simtoolreal_shared.sonic import (
@@ -54,6 +56,40 @@ def main():
     print("[G1 test] reset and 67-action / 69-joint contract passed", flush=True)
 
     assert cfg.reward.to_dict() == G1WujiSonicEnvCfg().reward.to_dict()
+    assert cfg.reward.to_dict() == SimToolRealEnvCfg().reward.to_dict()
+    assert cfg.sonic.latent_rate_penalty == 0.0
+    reward_arm_names = [robot_env.robot.data.joint_names[i] for i in robot_env._reward_arm_joint_ids]
+    reward_hand_names = [robot_env.robot.data.joint_names[i] for i in robot_env._reward_hand_joint_ids]
+    assert reward_arm_names == list(RIGHT_ARM_NAMES)
+    assert reward_hand_names == list(RIGHT_HAND_NAMES)
+    assert len(robot_env._body_joint_ids) == 29
+
+    # Exercise the real reward hook with known simulated joint velocities.
+    # Non-task joints and latent changes must not change the default penalty.
+    positions = robot_env.robot.data.joint_pos.clone()
+    velocities = torch.full_like(positions, 0.7)
+    velocities[:, robot_env._reward_arm_joint_ids] = torch.arange(
+        -3, 4, device=robot_env.device, dtype=velocities.dtype
+    )
+    velocities[:, robot_env._reward_hand_joint_ids] = torch.linspace(
+        -2.0, 2.0, 20, device=robot_env.device
+    )
+    robot_env.robot.write_joint_state_to_sim(positions, velocities)
+    robot_env._get_dones()
+    robot_env._meta_actions[:, :64] = 1.0
+    robot_env._previous_meta_actions[:, :64] = -1.0
+    robot_env._get_rewards()
+    torch.testing.assert_close(
+        robot_env._reward_terms["kuka_actions_penalty"],
+        -0.03 * velocities[:, robot_env._reward_arm_joint_ids].abs().sum(dim=-1),
+    )
+    torch.testing.assert_close(
+        robot_env._reward_terms["hand_actions_penalty"],
+        -0.003 * velocities[:, robot_env._reward_hand_joint_ids].abs().sum(dim=-1),
+    )
+    assert (robot_env._reward_terms["latent_rate_penalty"] == 0).all()
+    obs, _ = env.reset()
+    print("[G1 test] original 0.03/0.003 physical velocity penalties on right arm/hand; latent penalty disabled", flush=True)
     palm_tip_names = [f"{side}_palm_link" for side in ("left", "right")] + [
         f"{side}_finger{i}_tip_link" for side in ("left", "right") for i in range(1, 6)
     ]
@@ -272,6 +308,12 @@ def main():
         "minimum_initial_hand_frame_clearance_m": min_clearance,
         "both_hands_initially_over_table": True,
         "reward_matches_full_task": cfg.reward.to_dict() == G1WujiSonicEnvCfg().reward.to_dict(),
+        "reward_weights_match_original": cfg.reward.to_dict() == SimToolRealEnvCfg().reward.to_dict(),
+        "velocity_penalty_arm_joints": reward_arm_names,
+        "velocity_penalty_hand_joints": reward_hand_names,
+        "arm_velocity_penalty_coefficient": cfg.reward.kuka_actions_penalty_scale,
+        "hand_velocity_penalty_coefficient": cfg.reward.hand_actions_penalty_scale,
+        "latent_rate_penalty_coefficient": cfg.sonic.latent_rate_penalty,
         "sonic_version": "1.1",
         "sonic_latent_quantized": True,
         "sonic_fsq_levels": FSQ_LEVELS,

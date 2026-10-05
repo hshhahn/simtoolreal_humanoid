@@ -75,6 +75,13 @@ MUJOCO_TO_SONIC = (
     28,
 )
 BODY_JOINT_NAMES = tuple(MUJOCO_BODY_NAMES[i] for i in MUJOCO_TO_SONIC)
+RIGHT_ARM_NAMES = tuple(
+    f"right_{joint}_joint"
+    for joint in (
+        "shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow",
+        "wrist_roll", "wrist_pitch", "wrist_yaw",
+    )
+)
 LEFT_HAND_NAMES = wuji_joint_names("left")
 RIGHT_HAND_NAMES = wuji_joint_names("right")
 ALL_JOINT_NAMES = BODY_JOINT_NAMES + LEFT_HAND_NAMES + RIGHT_HAND_NAMES
