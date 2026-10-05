@@ -2,7 +2,7 @@
 
 This repository contains our modified [SimToolReal](https://github.com/tylerlum/simtoolreal) environment for a free-standing Unitree G1 with two original Wuji hands. PPO predicts a frozen SONIC 1.1 controller's latent command and three right-hand commands jointly. Both feed-forward and LSTM policies are included.
 
-The humanoid task is marker lifting over a lowered table. This is an experimental environment and controller integration; the existing humanoid training trials have not demonstrated successful sustained grasping. A fixed-KUKA parallel-gripper LSTM baseline uses the same two-marker asset pool with the original SimToolReal scene settings. Robot assets, environment code, agent configurations, and setup scripts are included. SONIC weights are downloaded from their pinned upstream revision during humanoid setup.
+The humanoid task is marker lifting over a lowered table. This is an experimental environment and controller integration; the existing humanoid training trials have not demonstrated successful sustained grasping. The current fixed-KUKA comparison uses the original SHARPA dexterous hand and SAPG on the same two-marker asset pool. The earlier parallel-gripper baseline is also included. Robot assets, environment code, agent configurations, and setup scripts are included. SONIC weights are downloaded from their pinned upstream revision during humanoid setup.
 
 ## Installation
 
@@ -93,6 +93,37 @@ Each Hydra run directory contains the rl_games experiment subdirectory. Checkpoi
 ```bash
 source ./activate_simtoolreal.sh
 tensorboard --logdir ../g1_wuji_runs --host 127.0.0.1 --port 6006
+```
+
+## KUKA + SHARPA dexterous-hand SAPG comparison
+
+This experiment uses the upstream `Isaacsimenvs-SimToolReal-Direct-v0` environment directly, including its original KUKA iiwa14 arm, left SHARPA hand, table, robot placement, reset and goal sampling, joint control, reward coefficients, bounding-box keypoints, domain randomization, and termination logic. Only the procedural object pool is restricted to the same two marker variants used in the humanoid experiment. It uses direct joint commands: seven arm actions plus all 22 SHARPA hand actions. No SONIC controller or three-command finger mapping is used. The actor observation has 140 values and the asymmetric critic has 162.
+
+The purpose is to compare manipulation behavior, including object flicking, on a fixed arm with the original dexterous hand. This is the upstream Isaac Sim port; it retains the known lift-reference difference relative to the paper's Isaac Gym implementation. The two-marker task restriction also differs from the full paper training distribution.
+
+Install the base environment with `./setup_simtoolreal.sh`, then start training from the checkout root on an allocated GPU:
+
+```bash
+./run_kuka_sharpa_sapg_training.sh \
+  'hydra.run.dir=../kuka_gripper_runs/${now:%Y%m%d_%H%M%S}_sharpa_sapg'
+```
+
+The launcher reuses upstream `SimToolRealSAPG.yaml`: LSTM 1024, actor and asymmetric critic MLPs `[1024, 1024, 512, 512]`, 16-step rollouts, two PPO passes, six exploration groups, and a fresh policy trained for 40,000 iterations. Defaults are 24,576 environments, 4,096 environments per group, and actor/critic minibatches of 98,304. Reduce all four sizes together when required by host RAM or GPU memory, for example:
+
+```bash
+./run_kuka_sharpa_sapg_training.sh \
+  env.scene.num_envs=6144 \
+  agent.params.config.expl_coef_block_size=1024 \
+  agent.params.config.minibatch_size=24576 \
+  agent.params.config.central_value_config.minibatch_size=24576 \
+  'hydra.run.dir=../kuka_gripper_runs/${now:%Y%m%d_%H%M%S}_sharpa_sapg'
+```
+
+Checkpoints, the best checkpoint alias, and training curves are written under each run's `0_kuka_sharpa_sapg/nn/`, `0_kuka_sharpa_sapg/best/model.pth`, and `0_kuka_sharpa_sapg/summaries/`. Ten-second pose viewers are written to the run's `interactive_viewer/` directory. TensorBoard can display both KUKA experiments:
+
+```bash
+source ./activate_simtoolreal.sh
+tensorboard --logdir ../kuka_gripper_runs --host 127.0.0.1 --port 6007
 ```
 
 ## KUKA parallel-gripper LSTM baseline

@@ -103,3 +103,23 @@ KUKA SAPG launch verification, 2026-10-05:
   exploration groups, checkpoint and pose-viewer HTML written.
 - Launch script passes bash syntax checks; repository diff has no
   whitespace errors. These checks do not establish learned grasping.
+
+KUKA + SHARPA SAPG comparison verification, 2026-10-05:
+- Uses upstream Isaacsimenvs-SimToolReal-Direct-v0 directly with the original
+  7-joint KUKA arm and 22-joint SHARPA hand; only the object pool is restricted
+  to the same two procedural marker variants. No custom gripper adapter.
+- Saved configuration matches all 87 checked original task-YAML leaf fields
+  outside object-pool and environment-count overrides. Original actor/critic
+  networks, reward shaper and SAPG flags match upstream.
+- Actor observation is 140D, critic state 162D, policy action 29D.
+- 96-environment, three-iteration SAPG check: 43 model/critic tensors and core
+  losses finite; checkpoint and pose viewer written. Peak RSS 8.5 GiB.
+- 6,144-environment, four-iteration capacity check: finite model/critic tensors
+  and core losses; completed in 103 seconds. Peak RSS 24.9 GiB.
+- Local long run launches 12,288 environments, six groups of 2,048, and
+  49,152-transition actor/critic minibatches, targeting 40,000 iterations.
+  Launcher defaults retain upstream 24,576/4,096/98,304 for larger hosts.
+- Prior parallel-gripper SAPG run stopped at iteration 704. Its existing
+  checkpoints, TensorBoard events and pose viewers remain on disk.
+- These checks validate configuration and training execution; they do not
+  establish learned grasping or explain the humanoid flicking behavior.
