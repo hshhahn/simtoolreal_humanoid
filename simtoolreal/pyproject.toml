@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simtoolreal"
+version = "0.1.0"
+description = "Official implementation of SimToolReal: An Object-Centric Policy for Zero-Shot Dexterous Tool Manipulation"
+readme = "README.md"
+requires-python = ">=3.8,<3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "Tyler Lum", email = "tylergwlum@gmail.com" },
+    { name = "Kushal Kedia", email = "kk837@cornell.edu" },
+]
+keywords = ["robotics", "rl", "dexterous manipulation"]
+classifiers = [
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+]
+dependencies = [
+    "gym==0.23.1",
+    "torch",
+    "torchvision",
+    "omegaconf",
+    "termcolor",
+    "jinja2",
+    "hydra-core>=1.2",
+    "rl-games>=1.6.0",
+    "pyvirtualdisplay",
+    "urdfpy==0.0.22",
+    "pysdf==0.1.9",
+    "warp-lang==0.10.1",
+    "trimesh==3.23.5",
+    "coacd==1.0.5",
+    "numpy==1.23.0",
+    "scipy",
+    "matplotlib",
+    "networkx",
+    "pyrender",
+    "wandb==0.12.21",
+    "tensorboard",
+    "tensorboardx",
+    "opencv-python",
+    "imageio",
+    "pillow",
+    "transforms3d",
+    "requests",
+    "pyopenssl",
+    "ninja",
+    "pytorch3d",
+    "imageio[ffmpeg]",
+    "yourdfpy",
+    "viser",
+    "pytorch-kinematics",
+    "mujoco",
+    "ruff",
+    "tyro",
+    "isaacgym-stubs",
+]
+
+[project.optional-dependencies]
+ros = [
+    "rospkg",
+]
+dev = [
+    "ipykernel",
+    "ruff",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+include = [
+    "isaacgymenvs*",
+    "isaacsimenvs*",
+    "dextoolbench*",
+    "deployment*",
+    "baselines*",
+    "recorded_data*",
+    "simtoolreal_shared*",
+]
+
+[tool.uv]
+find-links = [
+    "https://download.pytorch.org/whl/cu118",
+]

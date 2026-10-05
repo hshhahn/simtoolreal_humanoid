@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+<robot name="box">
+  <link name="box">
+    <visual>
+      <material name="wood">
+        <color rgba="0.82 0.56 0.35 1.0"/>
+      </material>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </collision>
+    <!-- Bowl  -->
+    <visual>
+      <material name="red">
+        <color rgba="0.667 0.137 0.137 1"/>
+      </material>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/textured.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_0.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_1.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_2.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_3.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_4.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_5.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_6.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_7.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_8.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.15 0.1 0.16"/>
+      <geometry>
+        <mesh filename="ycb/024_bowl/coacd/decomp_9.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <!-- Plate  -->
+    <visual>
+      <material name="red">
+        <color rgba="0.667 0.137 0.137 1"/>
+      </material>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/textured.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_0.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_1.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_2.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_3.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_4.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_5.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_6.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_7.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_8.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.1 0.05 0.16"/>
+      <geometry>
+        <mesh filename="ycb/029_plate/coacd/decomp_9.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="500"/>
+      <friction value="1.0"/>
+      <inertia ixx="1000.0" ixy="0.0" ixz="0.0" iyy="1000.0" iyz="0.0" izz="1000.0"/>
+    </inertial>
+  </link>
+</robot>

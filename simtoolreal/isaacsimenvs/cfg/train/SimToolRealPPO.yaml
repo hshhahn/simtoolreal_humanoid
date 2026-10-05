@@ -1,0 +1,130 @@
+# SimToolReal rl_games PPO config — LSTM Asymmetric baseline.
+#
+# Ported from isaacgymenvs/cfg/train/SimToolRealLSTMAsymmetricPPO.yaml (which
+# extends SimToolRealPPO.yaml). Non-SAPG variant — SAPG lives in SimToolRealSAPG.yaml
+# and is the default train config for this task (see __init__.py).
+#
+# Network: 4×MLP [1024, 1024, 512, 512] + LSTM (units=1024, layers=1,
+# before_mlp=True, layer_norm=True). Asymmetric actor-critic via
+# central_value_config, with its own 4×MLP [1024, 1024, 512, 512].
+#
+# Placeholders resolved at runtime / in Phase D:
+#   - num_actors pulls from env.scene.num_envs via Hydra interpolation
+#   - central_value_config.network.mlp.input_shape — rl_games infers from
+#     state_space once SimToolRealEnv._get_observations returns
+#     {"policy", "critic"} (Phase D).
+
+params:
+  seed: 42
+
+  env:
+    clip_observations: 10.0   # matches env.obs.clamp_abs_observations
+    clip_actions: 1.0
+
+  algo:
+    name: a2c_continuous
+
+  model:
+    name: continuous_a2c_logstd
+
+  network:
+    name: actor_critic
+    separate: False
+    space:
+      continuous:
+        mu_activation: None
+        sigma_activation: None
+        mu_init:
+          name: default
+        sigma_init:
+          name: const_initializer
+          val: 0
+        fixed_sigma: 'fixed'   # our fork needs a string ('fixed' | 'coef_cond' | 'obs_cond'), not bool
+    mlp:
+      units: [1024, 1024, 512, 512]
+      activation: elu
+      d2rl: False
+      initializer:
+        name: default
+      regularizer:
+        name: None
+    rnn:
+      name: lstm
+      units: 1024
+      layers: 1
+      before_mlp: True
+      layer_norm: True
+
+  load_checkpoint: False
+  load_path: ''
+
+  config:
+    # Must start with `<int>_` — our vendored rl_games parses policy_idx from the prefix.
+    name: 0_simtoolreal
+    full_experiment_name: ${.name}
+    env_name: rlgpu
+    device: 'cuda:0'
+    device_name: 'cuda:0'
+    multi_gpu: False
+    ppo: True
+    mixed_precision: True
+    normalize_input: True
+    normalize_value: True
+    value_bootstrap: True
+    normalize_advantage: True
+    reward_shaper:
+      scale_value: 0.01
+    num_actors: ${....env.scene.num_envs}
+    gamma: 0.99
+    tau: 0.95
+    learning_rate: 1e-4
+    lr_schedule: adaptive
+    schedule_type: standard
+    kl_threshold: 0.016
+    score_to_win: 1000000
+    max_epochs: 1000000
+    save_best_after: 100
+    save_frequency: 3000
+    print_stats: True
+    grad_norm: 1.0
+    entropy_coef: 0.0
+    truncate_grads: True
+    e_clip: 0.1
+    minibatch_size: 98304
+    mini_epochs: 2
+    critic_coef: 4.0
+    clip_value: True
+    horizon_length: 16
+    seq_length: 16
+    bounds_loss_coef: 0.0001
+
+    # Asymmetric critic (stateList > obsList)
+    central_value_config:
+      minibatch_size: 98304
+      mini_epochs: 2
+      learning_rate: 1e-4
+      kl_threshold: 0.016
+      clip_value: True
+      normalize_input: True
+      truncate_grads: True
+      network:
+        name: actor_critic
+        central_value: True
+        mlp:
+          units: [1024, 1024, 512, 512]
+          activation: elu
+          d2rl: False
+          initializer:
+            name: default
+          regularizer:
+            name: None
+
+    # Required by our vendored rl_games fork (a2c_common.py:398 does an unguarded
+    # .startswith on expl_type). PPO stays "none"; SAPG overrides to mixed_expl_*.
+    expl_type: none
+    use_others_experience: none
+
+    player:
+      deterministic: False
+      games_num: 100000
+      print_stats: False

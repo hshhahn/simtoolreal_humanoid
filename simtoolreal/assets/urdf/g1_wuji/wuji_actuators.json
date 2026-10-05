@@ -1,0 +1,282 @@
+{
+  "left_finger1_joint1": {
+    "stiffness": 0.40844710645048043,
+    "damping": 0.020882010257063675,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.4452,
+    "velocity_limit_sim": 8.587
+  },
+  "left_finger1_joint2": {
+    "stiffness": 0.6858601063643346,
+    "damping": 0.030610939996373314,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.4259,
+    "velocity_limit_sim": 11.1
+  },
+  "left_finger1_joint3": {
+    "stiffness": 0.2391112196099482,
+    "damping": 0.010181475050560962,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1888,
+    "velocity_limit_sim": 12.863
+  },
+  "left_finger1_joint4": {
+    "stiffness": 0.20736128319711747,
+    "damping": 0.00909698844675045,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1468,
+    "velocity_limit_sim": 13.578
+  },
+  "left_finger2_joint1": {
+    "stiffness": 0.37352218155860073,
+    "damping": 0.01882274330029718,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6188,
+    "velocity_limit_sim": 8.203
+  },
+  "left_finger2_joint2": {
+    "stiffness": 0.45592448909027794,
+    "damping": 0.019798167597016643,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1822,
+    "velocity_limit_sim": 8.115
+  },
+  "left_finger2_joint3": {
+    "stiffness": 0.24368366649522863,
+    "damping": 0.010477031953162727,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2251,
+    "velocity_limit_sim": 12.863
+  },
+  "left_finger2_joint4": {
+    "stiffness": 0.18026971340925335,
+    "damping": 0.008240212147903584,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.217,
+    "velocity_limit_sim": 13.578
+  },
+  "left_finger3_joint1": {
+    "stiffness": 0.3687093483646485,
+    "damping": 0.01848622487024593,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6494,
+    "velocity_limit_sim": 8.203
+  },
+  "left_finger3_joint2": {
+    "stiffness": 0.4164253443634641,
+    "damping": 0.018032947229953678,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1827,
+    "velocity_limit_sim": 8.115
+  },
+  "left_finger3_joint3": {
+    "stiffness": 0.22218607502059182,
+    "damping": 0.009592200014076666,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2078,
+    "velocity_limit_sim": 12.863
+  },
+  "left_finger3_joint4": {
+    "stiffness": 0.19427606072023446,
+    "damping": 0.009152994605972402,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2018,
+    "velocity_limit_sim": 13.578
+  },
+  "left_finger4_joint1": {
+    "stiffness": 0.35718151495111794,
+    "damping": 0.018376606800780005,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6389,
+    "velocity_limit_sim": 8.203
+  },
+  "left_finger4_joint2": {
+    "stiffness": 0.42977315313086895,
+    "damping": 0.01867700966212433,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1832,
+    "velocity_limit_sim": 8.115
+  },
+  "left_finger4_joint3": {
+    "stiffness": 0.24930151196247122,
+    "damping": 0.01059512121009555,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2249,
+    "velocity_limit_sim": 12.863
+  },
+  "left_finger4_joint4": {
+    "stiffness": 0.2285032688178066,
+    "damping": 0.009917602877441107,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2044,
+    "velocity_limit_sim": 13.578
+  },
+  "left_finger5_joint1": {
+    "stiffness": 0.3655325975433942,
+    "damping": 0.018616960278988272,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6441,
+    "velocity_limit_sim": 8.203
+  },
+  "left_finger5_joint2": {
+    "stiffness": 0.41393113081120425,
+    "damping": 0.018732177029667153,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1798,
+    "velocity_limit_sim": 8.115
+  },
+  "left_finger5_joint3": {
+    "stiffness": 0.22729367621965954,
+    "damping": 0.00951005441616486,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2384,
+    "velocity_limit_sim": 12.863
+  },
+  "left_finger5_joint4": {
+    "stiffness": 0.1964723550341816,
+    "damping": 0.009017295241756363,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1866,
+    "velocity_limit_sim": 13.578
+  },
+  "right_finger1_joint1": {
+    "stiffness": 0.40844710645048043,
+    "damping": 0.020882010257063675,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.4452,
+    "velocity_limit_sim": 8.587
+  },
+  "right_finger1_joint2": {
+    "stiffness": 0.6858601063643346,
+    "damping": 0.030610939996373314,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.4259,
+    "velocity_limit_sim": 11.1
+  },
+  "right_finger1_joint3": {
+    "stiffness": 0.2391112196099482,
+    "damping": 0.010181475050560962,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1888,
+    "velocity_limit_sim": 12.863
+  },
+  "right_finger1_joint4": {
+    "stiffness": 0.20736128319711747,
+    "damping": 0.00909698844675045,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1468,
+    "velocity_limit_sim": 13.578
+  },
+  "right_finger2_joint1": {
+    "stiffness": 0.37352218155860073,
+    "damping": 0.01882274330029718,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6188,
+    "velocity_limit_sim": 8.203
+  },
+  "right_finger2_joint2": {
+    "stiffness": 0.45592448909027794,
+    "damping": 0.019798167597016643,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1822,
+    "velocity_limit_sim": 8.115
+  },
+  "right_finger2_joint3": {
+    "stiffness": 0.24368366649522863,
+    "damping": 0.010477031953162727,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2251,
+    "velocity_limit_sim": 12.863
+  },
+  "right_finger2_joint4": {
+    "stiffness": 0.18026971340925335,
+    "damping": 0.008240212147903584,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.217,
+    "velocity_limit_sim": 13.578
+  },
+  "right_finger3_joint1": {
+    "stiffness": 0.3687093483646485,
+    "damping": 0.01848622487024593,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6494,
+    "velocity_limit_sim": 8.203
+  },
+  "right_finger3_joint2": {
+    "stiffness": 0.4164253443634641,
+    "damping": 0.018032947229953678,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1827,
+    "velocity_limit_sim": 8.115
+  },
+  "right_finger3_joint3": {
+    "stiffness": 0.22218607502059182,
+    "damping": 0.009592200014076666,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2078,
+    "velocity_limit_sim": 12.863
+  },
+  "right_finger3_joint4": {
+    "stiffness": 0.19427606072023446,
+    "damping": 0.009152994605972402,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2018,
+    "velocity_limit_sim": 13.578
+  },
+  "right_finger4_joint1": {
+    "stiffness": 0.35718151495111794,
+    "damping": 0.018376606800780005,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6389,
+    "velocity_limit_sim": 8.203
+  },
+  "right_finger4_joint2": {
+    "stiffness": 0.42977315313086895,
+    "damping": 0.01867700966212433,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1832,
+    "velocity_limit_sim": 8.115
+  },
+  "right_finger4_joint3": {
+    "stiffness": 0.24930151196247122,
+    "damping": 0.01059512121009555,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2249,
+    "velocity_limit_sim": 12.863
+  },
+  "right_finger4_joint4": {
+    "stiffness": 0.2285032688178066,
+    "damping": 0.009917602877441107,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2044,
+    "velocity_limit_sim": 13.578
+  },
+  "right_finger5_joint1": {
+    "stiffness": 0.3655325975433942,
+    "damping": 0.018616960278988272,
+    "armature": 0.0005,
+    "effort_limit_sim": 0.6441,
+    "velocity_limit_sim": 8.203
+  },
+  "right_finger5_joint2": {
+    "stiffness": 0.41393113081120425,
+    "damping": 0.018732177029667153,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1798,
+    "velocity_limit_sim": 8.115
+  },
+  "right_finger5_joint3": {
+    "stiffness": 0.22729367621965954,
+    "damping": 0.00951005441616486,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.2384,
+    "velocity_limit_sim": 12.863
+  },
+  "right_finger5_joint4": {
+    "stiffness": 0.1964723550341816,
+    "damping": 0.009017295241756363,
+    "armature": 0.0002,
+    "effort_limit_sim": 0.1866,
+    "velocity_limit_sim": 13.578
+  }
+}

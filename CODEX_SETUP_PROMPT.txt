@@ -1,0 +1,50 @@
+Set up this existing SimToolReal humanoid environment on our Slurm cluster.
+
+Repository: https://github.com/hshhahn/simtoolreal_humanoid
+
+Clone it onto persistent shared storage accessible from GPU nodes. Read the
+root README.md, SLURM_SETUP.md, SOURCE_PROVENANCE.json, and setup scripts.
+The simtoolreal/ directory is our modified upstream checkout. Preserve its
+G1/Wuji/SONIC implementation and vendored rl_games fixes.
+
+Inspect the compute-node OS, glibc, GPU model, NVIDIA driver, network access,
+GPU partitions/accounts, and available Apptainer/Singularity support. Use
+native installation if compatible; otherwise adapt installation and the batch
+entrypoint to a compatible container with NVIDIA GPU passthrough. Follow the
+site's GPU request syntax. Run GPU checks inside a Slurm allocation.
+
+Install uv if needed, then run ./setup_g1_wuji_sonic.sh. This creates a fresh
+Python 3.11.16 venv, installs Isaac Sim 5.1.0.0 / Isaac Lab 2.3.2.post1 /
+PyTorch 2.7.0+cu128, and downloads pinned SONIC 1.1 weights. The robot URDFs
+and meshes are already committed; source rebuilding is optional. Keep the
+root layout with models/ alongside simtoolreal/. Respect the documented
+dependency overrides and the editable root installation with --no-deps.
+
+Preserve the current experiment:
+- Free-standing G1, original Wuji hands on both wrists; right hand used first.
+- Frozen SONIC 1.1; 64 normalized body outputs quantized to its native FSQ
+  grid before decoding, plus 3 continuous right-hand commands.
+- Hand commands: thumb rotation, thumb bending, shared four-finger bending.
+- Actor 432D / privileged critic 454D; actor gets the current observation
+  and previous action, while SONIC retains separate 10-frame history.
+- MLP [1024, 512, 256, 128] ELU; LSTM alternative uses one 1024-unit layer
+  before that MLP and sequence length 16.
+- 128 environments, 200 Hz physics, 50 Hz control.
+- Marker lift task Isaacsimenvs-G1-Wuji-Sonic-Lift-v0, lowered table and
+  object positions as configured.
+- Existing reward weights, object bounding boxes, success criteria,
+  exploration settings and physics guards. There is no upright reward.
+
+Create slurm_logs/ before submitting slurm/verify.sbatch with the correct
+partition/account and GPU request. Complete its CPU checks, 500-step GPU
+environment verification, and two PPO iterations of each architecture.
+Confirm finite results, checkpoint creation, and TensorBoard event files.
+
+Keep one allocated GPU per training process and respect CUDA_VISIBLE_DEVICES.
+Use node-local Kit caches and persistent shared storage for checkpoints/logs.
+Adapt the supplied Slurm scripts to the site, and provide exact commands for
+MLP, LSTM, and the optional four-job paired seed array. Leave long training
+jobs unsubmitted; this request authorizes setup and short verification only.
+
+Report installed versions, verification evidence, any remaining cluster
+limitations, submission commands, and checkpoint/TensorBoard paths.

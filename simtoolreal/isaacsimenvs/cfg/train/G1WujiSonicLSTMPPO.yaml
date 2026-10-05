@@ -1,0 +1,97 @@
+# Recurrent actor variant of G1WujiSonicPPO; task and reward settings are shared.
+# Current 432D observation -> LSTM(1024) -> MLP -> SONIC64 + Wuji3.
+# The privileged critic stays feed-forward; SONIC keeps its own 10-frame history.
+params:
+  seed: 42
+  env:
+    clip_observations: 10.0
+    clip_actions: 1.0
+  algo:
+    name: a2c_continuous
+  model:
+    name: continuous_a2c_logstd
+  network:
+    name: sonic_actor_critic
+    separate: False
+    space:
+      continuous:
+        mu_activation: None
+        sigma_activation: None
+        mu_init: {name: default}
+        sigma_init: {name: const_initializer, val: -2.0}
+        fixed_sigma: fixed
+    mlp:
+      units: [1024, 512, 256, 128]
+      activation: elu
+      d2rl: False
+      initializer: {name: default}
+      regularizer: {name: None}
+    rnn:
+      name: lstm
+      units: 1024
+      layers: 1
+      before_mlp: True
+      layer_norm: True
+  load_checkpoint: False
+  load_path: ''
+  config:
+    name: 0_g1_wuji_sonic11_lstm
+    full_experiment_name: ${.name}
+    env_name: rlgpu
+    device: cuda:0
+    device_name: cuda:0
+    multi_gpu: False
+    ppo: True
+    mixed_precision: True
+    normalize_input: True
+    normalize_value: True
+    value_bootstrap: True
+    normalize_advantage: True
+    reward_shaper: {scale_value: 0.01}
+    num_actors: ${....env.scene.num_envs}
+    gamma: 0.99
+    tau: 0.95
+    learning_rate: 0.0001
+    lr_schedule: adaptive
+    schedule_type: standard
+    kl_threshold: 0.016
+    score_to_win: 1000000
+    max_epochs: 10000
+    save_best_after: 10
+    save_frequency: 100
+    print_stats: True
+    grad_norm: 1.0
+    entropy_coef: 0.0
+    truncate_grads: True
+    e_clip: 0.2
+    minibatch_size: 2048
+    mini_epochs: 4
+    critic_coef: 4.0
+    clip_value: True
+    horizon_length: 16
+    seq_length: 16
+    zero_rnn_on_done: True
+    bounds_loss_coef: 0.0001
+    central_value_config:
+      minibatch_size: 2048
+      mini_epochs: 4
+      learning_rate: 0.0001
+      kl_threshold: 0.016
+      clip_value: True
+      normalize_input: True
+      truncate_grads: True
+      network:
+        name: actor_critic
+        central_value: True
+        mlp:
+          units: [1024, 512, 256, 128]
+          activation: elu
+          d2rl: False
+          initializer: {name: default}
+          regularizer: {name: None}
+    expl_type: none
+    use_others_experience: none
+    player:
+      deterministic: True
+      games_num: 100
+      print_stats: True

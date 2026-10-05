@@ -1,0 +1,32 @@
+{
+  "sonic_source": {
+    "url": "https://github.com/NVlabs/GR00T-WholeBodyControl",
+    "commit": "b042411fae38ee4d1af9aac82a37a1f8d14d6dd0",
+    "urdf": "gear_sonic/data/assets/robot_description/urdf/g1/main.urdf"
+  },
+  "wuji_source": {
+    "url": "https://github.com/wuji-technology/wuji-description",
+    "commit": "c2cd7f8d1ef8b6dc8cb907c17daa5a88b4442d95",
+    "variant": "original Wuji Hand, hand/body"
+  },
+  "unitree_source": {
+    "url": "https://github.com/unitreerobotics/unitree_ros",
+    "commit": "5994d4faef0a9cadd3287f8de0199a67eeb2a259"
+  },
+  "joints": {
+    "body": 29,
+    "left_hand": 20,
+    "right_hand": 20
+  },
+  "mount": {
+    "wrist_flange_x_m": 0.0415,
+    "hand_origin_x_m": 0.09106811141967774,
+    "palm_rpy": [
+      0,
+      1.5707963267948966,
+      0
+    ],
+    "adapter_density_kg_m3": 1240.0,
+    "status": "simulation mounting estimate; hardware flange calibration required"
+  }
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<robot name="handle_eraser">
+  <link name="handle_eraser">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="handle_eraser.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="handle_eraser.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <density value="400.0"/>
+    </inertial>
+  </link>
+</robot>

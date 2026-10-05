@@ -1,0 +1,29 @@
+Local export validation, 2026-10-05
+
+The exported checkout was installed into a fresh Python 3.11.16 virtual
+environment using the published setup scripts and pinned SONIC 1.1 revision.
+Package-download caches were reused; the venv and editable packages were new.
+GPU checks ran on Linux x86_64 with glibc 2.39 and an NVIDIA RTX PRO 6000
+Blackwell Max-Q Workstation Edition GPU.
+
+Passed:
+- Core package versions and import of this checkout's vendored rl_games.
+- SHA-256 checks for all six SONIC 1.1 model/config files.
+- Native 32-level FSQ projection and hand synergy contract.
+- Batched Torch decoder versus official ONNX: maximum error 8.34e-07.
+- 13 CPU regression tests covering exploration, recurrent policy gradients
+  and memory resets, physics guard, and first/subsequent checkpoint aliases.
+- Four marker-lift environments for 500 simulation steps: finite physics,
+  67-action / 69-joint dimensions, 432D actor / 454D critic, decoder-only
+  history, native FSQ inputs, and both hands initially above the table.
+- Injected fall and 1e11 rad/s velocity faults: isolated termination/reset;
+  invalid physics transition received the configured -5 reward.
+- Two PPO iterations at 128 environments for each of MLP and LSTM:
+  checkpoint creation and finite TensorBoard scalar values.
+- Bash syntax of the setup scripts, launchers, and Slurm templates.
+- Slurm command routing with an emulated allocation: four-job array uses
+  MLP/LSTM at seeds 42/43 and preserves CUDA_VISIBLE_DEVICES.
+
+The target Slurm cluster has not been tested from this workstation. Submit
+slurm/verify.sbatch on that cluster before a long training job. These checks
+verify installation and execution; they do not demonstrate learned grasping.

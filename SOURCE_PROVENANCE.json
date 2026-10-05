@@ -1,0 +1,21 @@
+{
+  "simtoolreal_upstream": "https://github.com/tylerlum/simtoolreal",
+  "simtoolreal_base_commit": "313d5aea1f507c6cfe097b672b62945d7b0bbff5",
+  "includes_local_humanoid_changes": true,
+  "source_layout": "simtoolreal/ contains the modified upstream checkout; workspace launchers remain at repository root",
+  "sonic_model": {
+    "repository": "nvidia/GEAR-SONIC",
+    "revision": "6733128a3d8a523b1418b06bca3cdf61c8b0987f",
+    "variant": "sonic_v1_1",
+    "download_directory": "models/GEAR-SONIC"
+  },
+  "robot_asset_provenance": "simtoolreal/assets/urdf/g1_wuji/provenance.json",
+  "excluded_artifacts": [
+    "virtual environments",
+    "training checkpoints and logs",
+    "SONIC model weights",
+    "local caches and credentials",
+    "third-party source checkouts",
+    "local visualizations"
+  ]
+}

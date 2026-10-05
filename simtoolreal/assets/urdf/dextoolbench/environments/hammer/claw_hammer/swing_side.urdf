@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<robot name="table_claw_hammer_swing_side">
+  <link name="box">
+    <visual>
+      <material name="wood">
+        <color rgba="0.82 0.56 0.35 1.0"/>
+      </material>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </collision>
+    <!-- Wall -->
+    <visual>
+      <material name="wall">
+        <color rgba="0.72 0.48 0.28 1.0"/>
+      </material>
+      <origin xyz="0.355 -0.05 0.33"/>
+      <geometry>
+        <box size="0.03 0.4 0.4"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.355 -0.05 0.33"/>
+      <geometry>
+        <box size="0.03 0.4 0.4"/>
+      </geometry>
+    </collision>
+    <!-- Nail (horizontal, sticking out of wall in -x direction) -->
+    <visual>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+      <origin xyz="0.295 -0.01 0.31"/>
+      <geometry>
+        <box size="0.09 0.03 0.03"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.295 -0.01 0.31"/>
+      <geometry>
+        <box size="0.09 0.03 0.03"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="500"/>
+      <friction value="1.0"/>
+      <inertia ixx="1000.0" ixy="0.0" ixz="0.0" iyy="1000.0" iyz="0.0" izz="1000.0"/>
+    </inertial>
+  </link>
+</robot>

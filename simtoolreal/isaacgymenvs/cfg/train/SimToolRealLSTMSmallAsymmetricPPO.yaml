@@ -1,0 +1,48 @@
+defaults:
+  - SimToolRealPPO
+  - _self_
+
+params:
+  network:
+    mlp:
+      units: [768, 512, 256]
+      activation: elu
+      d2rl: False
+      initializer:
+        name: default
+      regularizer:
+        name: None
+    rnn:
+      name: lstm
+      units: 768
+      layers: 1
+      before_mlp: True
+      layer_norm: True
+
+  config:
+    name: ${resolve_default:SimToolRealLSTMSmallAsymmetricPPO,${....experiment}}
+    minibatch_size: 98304
+    mini_epochs: 2
+
+    # Asymmetric Actor-Critic Configuration
+    central_value_config:
+      minibatch_size: 98304
+      mini_epochs: 2
+      learning_rate: 1e-4
+      kl_threshold: 0.016
+      clip_value: True
+      normalize_input: True
+      truncate_grads: True
+
+      network:
+        name: actor_critic
+        central_value: True  # This enables the asymmetric critic
+        
+        mlp:
+          units: [768, 512, 256]
+          activation: elu
+          d2rl: False
+          initializer:
+            name: default
+          regularizer:
+            name: None

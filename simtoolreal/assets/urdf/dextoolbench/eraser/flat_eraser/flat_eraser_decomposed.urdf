@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="flat_eraser">
+  <link name="flat_eraser">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="flat_eraser.obj" scale="1 1 1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="flat_eraser_collision/decomp_0.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="flat_eraser_collision/decomp_1.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="flat_eraser_collision/decomp_2.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="flat_eraser_collision/decomp_3.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0349726 -7.76239e-05 2.97282e-06" rpy="0 0 0" />
+      <mass value="0.0725315" />
+      <inertia ixx="2.03731e-05" ixy="3.82869e-08" ixz="2.56478e-07" iyy="0.000111757" iyz="1.17868e-08" izz="0.000101191" />
+    </inertial>
+  </link>
+</robot>

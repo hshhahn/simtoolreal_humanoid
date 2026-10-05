@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot name="table_flat_eraser_wipe_smile">
+  <link name="box">
+    <visual>
+      <material name="wood">
+        <color rgba="0.82 0.56 0.35 1.0"/>
+      </material>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </collision>
+    <!-- Whiteboard -->
+    <visual>
+      <material name="whiteboard">
+        <color rgba="1.0 1.0 1.0 1.0"/>
+      </material>
+      <origin xyz="0.35 0.0 0.35"/>
+      <geometry>
+        <box size="0.02 0.4 0.4"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.35 0.0 0.35"/>
+      <geometry>
+        <box size="0.02 0.4 0.4"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="500"/>
+      <friction value="1.0"/>
+      <inertia ixx="1000.0" ixy="0.0" ixz="0.0" iyy="1000.0" iyz="0.0" izz="1000.0"/>
+    </inertial>
+  </link>
+</robot>

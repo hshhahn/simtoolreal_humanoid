@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="claw_hammer">
+  <link name="claw_hammer">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="claw_hammer.obj" scale="1 1 1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="claw_hammer_collision/decomp_0.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="claw_hammer_collision/decomp_1.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="claw_hammer_collision/decomp_2.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="claw_hammer_collision/decomp_3.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="claw_hammer_collision/decomp_4.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0710074 -0.000954556 3.40549e-06" rpy="0 0 0" />
+      <mass value="0.0478283" />
+      <inertia ixx="1.32166e-05" ixy="1.09048e-06" ixz="5.47561e-07" iyy="0.000180518" iyz="-6.00857e-08" izz="0.000189688" />
+    </inertial>
+  </link>
+</robot>

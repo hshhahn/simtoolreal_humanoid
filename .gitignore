@@ -1,0 +1,33 @@
+# Installation and runtime artifacts
+.venv*/
+.cache/
+.tools/
+.logs/
+.render_deps/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+models/
+third_party/
+g1_wuji_runs/
+slurm_logs/
+visualizations/
+outputs/
+wandb/
+*.pth
+*.pt
+*.onnx
+*.usd
+*.usda
+*.usdc
+*.log
+
+# Credentials and agent state
+.env
+.env.*
+.aws/
+.codex/
+.agents/
+.ssh/

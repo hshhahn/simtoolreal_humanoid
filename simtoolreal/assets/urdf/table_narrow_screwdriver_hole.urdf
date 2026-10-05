@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<robot name="box">
+  <link name="box">
+    <visual>
+      <material name="wood">
+        <color rgba="0.82 0.56 0.35 1.0"/>
+      </material>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.475 0.4 0.3"/>
+      </geometry>
+    </collision>
+    <!-- Screwdriver Hole -->
+    <!-- Four walls making a hole -->
+    <!-- Let the hole center be at x=0.1, y=0.1, z=0.165 -->
+    <!-- Let the hole width be 0.02, height be 0.02 -->
+    <!-- It will be a square hole made up of four walls -->
+    <!-- The thickness of the walls is 0.01 -->
+    <!-- Top wall (positive Y) - extended to connect at corners -->
+    <visual>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+      <origin xyz="0.1 0.115 0.1525"/>
+      <geometry>
+        <box size="0.04 0.01 0.005"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.1 0.115 0.1525"/>
+      <geometry>
+        <box size="0.04 0.01 0.005"/>
+      </geometry>
+    </collision>
+    <!-- Bottom wall (negative Y) - extended to connect at corners -->
+    <visual>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+      <origin xyz="0.1 0.085 0.1525"/>
+      <geometry>
+        <box size="0.04 0.01 0.005"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.1 0.085 0.1525"/>
+      <geometry>
+        <box size="0.04 0.01 0.005"/>
+      </geometry>
+    </collision>
+    <!-- Right wall (positive X) - fits between top and bottom -->
+    <visual>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+      <origin xyz="0.115 0.1 0.1525"/>
+      <geometry>
+        <box size="0.01 0.02 0.005"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.115 0.1 0.1525"/>
+      <geometry>
+        <box size="0.01 0.02 0.005"/>
+      </geometry>
+    </collision>
+    <!-- Left wall (negative X) - fits between top and bottom -->
+    <visual>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+      <origin xyz="0.085 0.1 0.1525"/>
+      <geometry>
+        <box size="0.01 0.02 0.005"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.085 0.1 0.1525"/>
+      <geometry>
+        <box size="0.01 0.02 0.005"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="500"/>
+      <friction value="1.0"/>
+      <inertia ixx="1000.0" ixy="0.0" ixz="0.0" iyy="1000.0" iyz="0.0" izz="1000.0"/>
+    </inertial>
+  </link>
+</robot>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>W&B Interactive Robot Viewer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1117;
+        --panel: rgba(15, 23, 35, 0.88);
+        --panel-border: rgba(130, 170, 255, 0.18);
+        --text: #e6edf3;
+        --muted: #91a0b3;
+        --accent: #ffbe5c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(70, 110, 180, 0.2), transparent 35%),
+          linear-gradient(180deg, #0f1725 0%, #090c11 100%);
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      #viewer {
+        width: 100%;
+        height: 100%;
+      }
+
+      #hud {
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+      }
+
+      #titlebar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      #titlebar strong {
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      #titlebar span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      #controls {
+        display: grid;
+        grid-template-columns: auto auto auto minmax(160px, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      button,
+      input[type="range"] {
+        appearance: none;
+      }
+
+      button {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font: inherit;
+        justify-self: start;
+        white-space: nowrap;
+      }
+
+      button:hover {
+        border-color: rgba(255, 255, 255, 0.22);
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border: none;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      #status {
+        text-align: right;
+        font-size: 12px;
+        color: var(--muted);
+        min-width: 96px;
+      }
+
+      #error {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        max-width: 460px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(153, 27, 27, 0.9);
+        border: 1px solid rgba(254, 202, 202, 0.35);
+        display: none;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 720px) {
+        #hud {
+          left: 12px;
+          right: 12px;
+          bottom: 12px;
+        }
+
+        #controls {
+          grid-template-columns: auto auto auto;
+          justify-content: start;
+        }
+
+        #timeline {
+          grid-column: 1 / -1;
+          min-width: 0;
+        }
+
+        #status {
+          grid-column: 1 / -1;
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="viewer"></div>
+      <div id="error"></div>
+      <div id="hud">
+        <div id="titlebar">
+          <div>
+            <strong>Interactive Robot Viewer</strong>
+            <span>Three.js + urdf-loader prototype for W&amp;B</span>
+          </div>
+          <span id="frame-meta">Frame 0 / 0</span>
+        </div>
+        <div id="controls">
+          <button id="play-pause" type="button">Play</button>
+          <button id="loop-toggle" type="button">Loop: On</button>
+          <button id="reset" type="button">Reset</button>
+          <input id="timeline" type="range" min="0" max="0" value="0" step="1" />
+          <div id="status">t = 0.00s</div>
+        </div>
+      </div>
+    </div>
+
+    <script id="scene-json" type="application/json">__SCENE_JSON__</script>
+
+    <script type="module">
+      import * as THREE from "https://esm.sh/three@0.160.1";
+      import { OrbitControls } from "https://esm.sh/three@0.160.1/examples/jsm/controls/OrbitControls.js";
+      import { GLTFLoader } from "https://esm.sh/three@0.160.1/examples/jsm/loaders/GLTFLoader.js";
+      import { MTLLoader } from "https://esm.sh/three@0.160.1/examples/jsm/loaders/MTLLoader.js";
+      import { OBJLoader } from "https://esm.sh/three@0.160.1/examples/jsm/loaders/OBJLoader.js";
+      import { STLLoader } from "https://esm.sh/three@0.160.1/examples/jsm/loaders/STLLoader.js";
+      import * as URDFLoaderModule from "https://esm.sh/urdf-loader@0.12.4?deps=three@0.160.1";
+
+      const URDFLoader = URDFLoaderModule.default ?? URDFLoaderModule.URDFLoader ?? URDFLoaderModule;
+      THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+
+      const viewerEl = document.getElementById("viewer");
+      const errorEl = document.getElementById("error");
+      const playPauseButton = document.getElementById("play-pause");
+      const loopToggleButton = document.getElementById("loop-toggle");
+      const resetButton = document.getElementById("reset");
+      const timelineEl = document.getElementById("timeline");
+      const statusEl = document.getElementById("status");
+      const frameMetaEl = document.getElementById("frame-meta");
+
+      const sceneConfig = JSON.parse(document.getElementById("scene-json").textContent);
+      const trajectory = sceneConfig.trajectory;
+      const robotConfigs = sceneConfig.robots;
+
+      const timestamps = trajectory.timestamps;
+      const positions = trajectory.positions;
+      const jointNames = trajectory.joint_names;
+      const objectTrajectories = trajectory.object_trajectories ?? {};
+      const robotBaseTrajectory = trajectory.base_trajectory ?? null;
+
+      if (!timestamps.length || timestamps.length !== positions.length) {
+        throw new Error("Trajectory must contain matching timestamps and positions arrays.");
+      }
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0b0f15);
+
+      const camera = new THREE.PerspectiveCamera(45, viewerEl.clientWidth / viewerEl.clientHeight, 0.01, 100);
+      camera.up.set(0, 0, 1);
+      camera.position.set(0.0, -1.0, 1.03);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(viewerEl.clientWidth, viewerEl.clientHeight);
+      viewerEl.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0.0, 0.0, 0.53);
+      controls.enableDamping = true;
+
+      const hemiLight = new THREE.HemisphereLight(0xf7fbff, 0x5b6f86, 2.8);
+      scene.add(hemiLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 2.1);
+      keyLight.position.set(2.5, -2.0, 3.8);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0xf6faff, 1.4);
+      fillLight.position.set(-3.5, -1.0, 2.8);
+      scene.add(fillLight);
+
+      const rimLight = new THREE.DirectionalLight(0xe8f3ff, 1.0);
+      rimLight.position.set(0.5, 3.0, 2.5);
+      scene.add(rimLight);
+
+      const topLight = new THREE.PointLight(0xffffff, 1.2, 0, 2);
+      topLight.position.set(0.0, 0.6, 2.2);
+      scene.add(topLight);
+
+      const floor = new THREE.Mesh(
+        new THREE.CircleGeometry(3.5, 96),
+        new THREE.MeshStandardMaterial({
+          color: 0x2d3b4e,
+          roughness: 0.98,
+          metalness: 0.04
+        })
+      );
+      floor.position.z = -0.101;
+      scene.add(floor);
+
+      const grid = new THREE.GridHelper(6, 24, 0x35557a, 0x203447);
+      grid.rotation.x = Math.PI / 2;
+      grid.position.z = -0.1;
+      scene.add(grid);
+
+      const axes = new THREE.AxesHelper(0.35);
+      scene.add(axes);
+
+      function detectMeshFormat(path) {
+        const lowerPath = path.toLowerCase();
+        if (
+          lowerPath.endsWith(".glb") ||
+          lowerPath.endsWith(".gltf") ||
+          lowerPath.includes("#ext=.glb") ||
+          lowerPath.includes("#ext=.gltf") ||
+          lowerPath.includes("ext=.glb") ||
+          lowerPath.includes("ext=.gltf")
+        ) {
+          return "gltf";
+        }
+        if (
+          lowerPath.endsWith(".stl") ||
+          lowerPath.includes("#ext=.stl") ||
+          lowerPath.includes("ext=.stl")
+        ) {
+          return "stl";
+        }
+        if (
+          lowerPath.endsWith(".obj") ||
+          lowerPath.includes("#ext=.obj") ||
+          lowerPath.includes("ext=.obj")
+        ) {
+          return "obj";
+        }
+        return null;
+      }
+
+      let animatedRobot = null;
+      const sceneRobots = new Map();
+      let currentFrame = 0;
+      let isPlaying = true;
+      let isLooping = true;
+      let playbackStartTimeMs = 0;
+      let playbackStartFrame = 0;
+
+      const trajectoryDuration = timestamps[timestamps.length - 1];
+      timelineEl.max = String(timestamps.length - 1);
+
+      function showError(message) {
+        errorEl.style.display = "block";
+        errorEl.textContent = message;
+      }
+
+      function updateStatus(frameIndex) {
+        const timestamp = timestamps[frameIndex];
+        statusEl.textContent = `t = ${timestamp.toFixed(2)}s`;
+        frameMetaEl.textContent = `Frame ${frameIndex + 1} / ${timestamps.length}`;
+      }
+
+      function applyFrame(frameIndex) {
+        if (!animatedRobot) {
+          return;
+        }
+
+        currentFrame = Math.max(0, Math.min(frameIndex, timestamps.length - 1));
+        const framePositions = positions[currentFrame];
+
+        jointNames.forEach((jointName, jointIndex) => {
+          const joint = animatedRobot.joints[jointName];
+          if (!joint) {
+            throw new Error(`Joint "${jointName}" not found in URDF.`);
+          }
+          joint.setJointValue(framePositions[jointIndex]);
+        });
+
+        const basePosition = robotBaseTrajectory?.positions?.[currentFrame];
+        if (basePosition) {
+          animatedRobot.position.set(...basePosition);
+        }
+
+        const baseQuat = robotBaseTrajectory?.quats?.[currentFrame];
+        if (baseQuat) {
+          animatedRobot.quaternion.set(...baseQuat);
+        }
+
+        Object.entries(objectTrajectories).forEach(([objectName, objectTrajectory]) => {
+          const objectRobot = sceneRobots.get(objectName);
+          if (!objectRobot) {
+            throw new Error(`Object trajectory targets missing scene robot "${objectName}".`);
+          }
+
+          const objectPosition = objectTrajectory.positions?.[currentFrame];
+          if (objectPosition) {
+            objectRobot.position.set(...objectPosition);
+          }
+
+          const objectRpy = objectTrajectory.rpys?.[currentFrame];
+          if (objectRpy) {
+            objectRobot.rotation.set(...objectRpy);
+          }
+
+          const objectQuat = objectTrajectory.quats?.[currentFrame];
+          if (objectQuat) {
+            objectRobot.quaternion.set(...objectQuat);
+          }
+        });
+
+        timelineEl.value = String(currentFrame);
+        updateStatus(currentFrame);
+      }
+
+      function setPlaying(nextPlaying) {
+        isPlaying = nextPlaying;
+        playPauseButton.textContent = isPlaying ? "Pause" : "Play";
+
+        if (isPlaying) {
+          playbackStartTimeMs = performance.now();
+          playbackStartFrame = currentFrame;
+        }
+      }
+
+      function setLooping(nextLooping) {
+        isLooping = nextLooping;
+        loopToggleButton.textContent = isLooping ? "Loop: On" : "Loop: Off";
+      }
+
+      function applyColorOverride(root, colorOverride) {
+        if (!colorOverride) {
+          return root;
+        }
+
+        const overrideColor = new THREE.Color(...colorOverride);
+        root.traverse((child) => {
+          if (!child.isMesh || !child.material) {
+            return;
+          }
+
+          const replacementMaterial = new THREE.MeshStandardMaterial({
+            color: overrideColor.clone(),
+            roughness: 0.88,
+            metalness: 0.04,
+          });
+
+          if (Array.isArray(child.material)) {
+            child.material = child.material.map(() => replacementMaterial.clone());
+          } else {
+            child.material = replacementMaterial;
+          }
+        });
+        return root;
+      }
+
+      function createRobotLoader(robotConfig) {
+        const manager = new THREE.LoadingManager();
+        manager.onError = (url) => showError(`Failed to load asset: ${url}`);
+
+        const loader = new URDFLoader(manager);
+        loader.packages = "";
+        loader.loadMeshCb = (path, loadingManager, onComplete) => {
+          const meshFormat = detectMeshFormat(path);
+
+          const completeWithOverride = (object, error = null) => {
+            if (object && robotConfig.color_override) {
+              applyColorOverride(object, robotConfig.color_override);
+            }
+            onComplete(object, error);
+          };
+
+          if (meshFormat === "gltf") {
+            const gltfLoader = new GLTFLoader(loadingManager);
+            gltfLoader.load(
+              path,
+              (result) => completeWithOverride(result.scene),
+              undefined,
+              (error) => completeWithOverride(null, error),
+            );
+            return;
+          }
+
+          if (meshFormat === "stl") {
+            const stlLoader = new STLLoader(loadingManager);
+            stlLoader.load(
+              path,
+              (geometry) => {
+                geometry.computeVertexNormals();
+                const mesh = new THREE.Mesh(
+                  geometry,
+                  new THREE.MeshStandardMaterial({
+                    color: 0xb8b8b8,
+                    roughness: 0.8,
+                    metalness: 0.2,
+                  })
+                );
+                completeWithOverride(mesh);
+              },
+              undefined,
+              (error) => completeWithOverride(null, error),
+            );
+            return;
+          }
+
+          if (meshFormat === "obj") {
+            const objLoader = new OBJLoader(loadingManager);
+            const meshUrl = new URL(path, window.location.href);
+            const baseUrl = new URL("./", meshUrl).toString();
+
+            const loadObj = (materials = null) => {
+              if (materials && !robotConfig.color_override) {
+                materials.preload();
+                objLoader.setMaterials(materials);
+              }
+              objLoader.setResourcePath(baseUrl);
+              objLoader.load(
+                path,
+                (object) => completeWithOverride(object),
+                undefined,
+                (error) => completeWithOverride(null, error),
+              );
+            };
+
+            if (robotConfig.color_override) {
+              loadObj();
+              return;
+            }
+
+            // Only fetch material.mtl when the OBJ actually references one
+            // via `mtllib`. CoACD outputs and many trimesh exports ship
+            // vertex colors instead and have no .mtl on disk, so the old
+            // unconditional MTLLoader call produced a 404 + console noise
+            // for every such mesh. We sniff the OBJ text first (the second
+            // OBJLoader fetch reuses the HTTP cache) and skip MTL entirely
+            // when no mtllib is present.
+            fetch(meshUrl.toString())
+              .then((r) => (r.ok ? r.text() : ""))
+              .then((objText) => {
+                const m = objText.match(/^mtllib\s+(\S+)/m);
+                if (!m) {
+                  loadObj();
+                  return;
+                }
+                const mtlUrl = new URL(m[1], meshUrl).toString();
+                const mtlLoader = new MTLLoader(loadingManager);
+                mtlLoader.setResourcePath(baseUrl);
+                mtlLoader.load(
+                  mtlUrl,
+                  (materials) => loadObj(materials),
+                  undefined,
+                  () => loadObj(),
+                );
+              })
+              .catch(() => loadObj());
+            return;
+          }
+
+          completeWithOverride(null, new Error(`Unsupported mesh format for path: ${path}`));
+        };
+
+        return loader;
+      }
+
+      function resetPlayback() {
+        setPlaying(false);
+        applyFrame(0);
+      }
+
+      function animate(nowMs) {
+        requestAnimationFrame(animate);
+
+        if (isPlaying && trajectoryDuration > 0) {
+          const startTime = timestamps[playbackStartFrame];
+          const elapsed = (nowMs - playbackStartTimeMs) / 1000;
+          const targetTime = startTime + elapsed;
+
+          if (targetTime >= trajectoryDuration) {
+            if (isLooping) {
+              applyFrame(0);
+              playbackStartTimeMs = nowMs;
+              playbackStartFrame = 0;
+            } else {
+              applyFrame(timestamps.length - 1);
+              setPlaying(false);
+            }
+          } else {
+            let nextFrame = currentFrame;
+            while (nextFrame < timestamps.length - 1 && timestamps[nextFrame + 1] <= targetTime) {
+              nextFrame += 1;
+            }
+            if (nextFrame !== currentFrame) {
+              applyFrame(nextFrame);
+            }
+          }
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      function handleResize() {
+        const width = viewerEl.clientWidth;
+        const height = viewerEl.clientHeight;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+      }
+
+      playPauseButton.addEventListener("click", () => {
+        if (currentFrame >= timestamps.length - 1) {
+          applyFrame(0);
+        }
+        setPlaying(!isPlaying);
+      });
+
+      loopToggleButton.addEventListener("click", () => {
+        setLooping(!isLooping);
+      });
+
+      resetButton.addEventListener("click", resetPlayback);
+      timelineEl.addEventListener("input", (event) => {
+        setPlaying(false);
+        applyFrame(Number(event.target.value));
+      });
+
+      window.addEventListener("resize", handleResize);
+
+      function loadRobot(robotConfig) {
+        return new Promise((resolve, reject) => {
+          const loader = createRobotLoader(robotConfig);
+          if (robotConfig.urdf_text) {
+            const robotDescription = new DOMParser().parseFromString(robotConfig.urdf_text, "text/xml");
+            const parserError = robotDescription.querySelector("parsererror");
+            if (parserError) {
+              reject(new Error(`Failed to parse URDF for "${robotConfig.name}".\n${parserError.textContent}`));
+              return;
+            }
+
+            try {
+              const robot = loader.parse(robotDescription);
+              robot.position.set(...robotConfig.position);
+              robot.rotation.set(...robotConfig.rpy);
+              robot.name = robotConfig.name;
+              applyColorOverride(robot, robotConfig.color_override);
+              scene.add(robot);
+              resolve(robot);
+            } catch (error) {
+              reject(error);
+            }
+            return;
+          }
+
+          loader.load(
+            robotConfig.urdf_path,
+            (robot) => {
+              robot.position.set(...robotConfig.position);
+              robot.rotation.set(...robotConfig.rpy);
+              robot.name = robotConfig.name;
+              applyColorOverride(robot, robotConfig.color_override);
+              scene.add(robot);
+              resolve(robot);
+            },
+            undefined,
+            (error) => reject(error)
+          );
+        });
+      }
+
+      async function initScene() {
+        try {
+          const loadedRobots = await Promise.all(
+            robotConfigs.map(async (robotConfig) => {
+              const robot = await loadRobot(robotConfig);
+              sceneRobots.set(robotConfig.name, robot);
+
+              if (robotConfig.animated) {
+                if (animatedRobot) {
+                  throw new Error("Only one animated robot is supported in this prototype.");
+                }
+                animatedRobot = robot;
+              }
+            })
+          );
+          void loadedRobots;
+
+          if (!animatedRobot) {
+            throw new Error("Scene must define exactly one animated robot.");
+          }
+
+          applyFrame(0);
+          setLooping(true);
+          setPlaying(true);
+          requestAnimationFrame(animate);
+        } catch (error) {
+          console.error(error);
+          showError(error instanceof Error ? error.message : String(error));
+        }
+      }
+
+      initScene();
+    </script>
+  </body>
+</html>

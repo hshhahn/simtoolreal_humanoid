@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot name="blue_brush">
+  <link name="blue_brush">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="blue_brush.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="blue_brush.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <!-- From real world measurement, this is about 289.5g, this density gets us there, and CoM is at (0.1, 0, 0) wrt origin -->
+      <density value="325.0"/>
+      <!-- <origin xyz="0.1 0 0" rpy="0 0 0"/> -->
+      <origin xyz="0.06 0 0" rpy="0 0 0"/>
+    </inertial>
+  </link>
+</robot>

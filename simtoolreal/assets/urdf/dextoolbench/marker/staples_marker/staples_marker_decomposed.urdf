@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="staples_marker">
+  <link name="staples_marker">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="staples_marker.obj" scale="1 1 1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="staples_marker_collision/decomp_0.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="staples_marker_collision/decomp_1.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="staples_marker_collision/decomp_2.obj" scale="1 1 1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0257038 -6.72565e-07 -1.50602e-06" rpy="0 0 0" />
+      <mass value="0.0128554" />
+      <inertia ixx="5.05352e-07" ixy="-2.16234e-09" ixz="1.86721e-09" iyy="1.78585e-05" iyz="-2.17513e-10" izz="1.78618e-05" />
+    </inertial>
+  </link>
+</robot>
