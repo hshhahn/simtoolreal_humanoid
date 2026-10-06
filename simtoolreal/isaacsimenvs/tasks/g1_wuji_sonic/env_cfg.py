@@ -1,4 +1,4 @@
-"""Free-standing G1 + dual Wuji hands; joint policy action = SONIC64 + hand3."""
+"""Free-standing G1 + Wuji hands, controlled jointly with SONIC 1.1."""
 
 from pathlib import Path
 
@@ -30,6 +30,16 @@ EXTRA_OBS_SIZES = {
     "sonic_current_proprioception": 93,
     "meta_actions": 67,
 }
+BIMANUAL_OBS_SIZES = {
+    **EXTRA_OBS_SIZES,
+    "meta_actions": 70,
+    # Both sets of fingertips use the existing right-palm reference frame.
+    "fingertip_pos_rel_palm": 30,
+    "closest_fingertip_dist": 10,
+    "left_palm_pos": 3,
+    "left_palm_rot": 4,
+    "left_palm_vel": 6,
+}
 
 
 @configclass
@@ -42,11 +52,14 @@ class SonicCfg:
     # Uses action.arm_moving_average and action.dof_speed_scale on the seven
     # manipulation-arm joints only; SONIC's remaining body outputs stay direct.
     smooth_right_arm_targets: bool = False
+    smooth_left_arm_targets: bool = False
+    control_both_hands: bool = False
     # Independent exploration for the three normalized Wuji commands. Body
     # log-std remains the PPO default (-2); no noise is added inside the decoder.
     policy_hand_std_init: float = 0.5
     policy_bounded_hand_mean: bool = True
     initial_hand_action: tuple[float, float, float] = (-0.5, -0.5, -0.5)
+    initial_left_hand_action: tuple[float, float, float] = (-0.5, -0.5, -0.5)
     base_position: tuple[float, float, float] = (0.0, 0.6, 0.76)
     base_rotation: tuple[float, float, float, float] = (
         0.7071067811865476,
@@ -158,4 +171,34 @@ class G1WujiSonicLiftEnvCfg(G1WujiSonicEnvCfg):
     reset: ResetCfg = G1WujiSonicEnvCfg().reset.replace(
         fixed_start_pose=(-0.23, 0.32, 0.54, 1.0, 0.0, 0.0, 0.0),
         fixed_goal_pose=(-0.23, 0.32, 0.70, 1.0, 0.0, 0.0, 0.0),
+    )
+
+
+@configclass
+class G1WujiSonicBimanualEnvCfg(G1WujiSonicEnvCfg):
+    """Full tool pool, one object per environment, either or both hands usable.
+
+    Action order preserves the original prefix: SONIC64, right-hand3, left-hand3.
+    Lift/pose goals and reward coefficients are inherited from SimToolReal.
+    """
+
+    action_space: int = 70
+    observation_space: int = 457
+    state_space: int = 490
+    sonic: SonicCfg = SonicCfg(
+        control_both_hands=True,
+        smooth_right_arm_targets=True,
+        smooth_left_arm_targets=True,
+    )
+    action: ActionCfg = ActionCfg(
+        arm_moving_average=0.1, hand_moving_average=0.1, dof_speed_scale=1.5
+    )
+    obs: ObsCfg = ObsCfg(
+        obs_list=G1WujiSonicEnvCfg().obs.obs_list + ("left_palm_pos", "left_palm_rot"),
+        state_list=G1WujiSonicEnvCfg().obs.state_list
+        + ("left_palm_pos", "left_palm_rot", "left_palm_vel"),
+    )
+    # Give each hand opportunities to approach tools on its side of the table.
+    reset: ResetCfg = G1WujiSonicEnvCfg().reset.replace(
+        reset_position_center_xy=(0.0, 0.30), reset_position_noise_x=0.23
     )

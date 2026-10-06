@@ -82,6 +82,7 @@ RIGHT_ARM_NAMES = tuple(
         "wrist_roll", "wrist_pitch", "wrist_yaw",
     )
 )
+LEFT_ARM_NAMES = tuple(name.replace("right_", "left_", 1) for name in RIGHT_ARM_NAMES)
 LEFT_HAND_NAMES = wuji_joint_names("left")
 RIGHT_HAND_NAMES = wuji_joint_names("right")
 ALL_JOINT_NAMES = BODY_JOINT_NAMES + LEFT_HAND_NAMES + RIGHT_HAND_NAMES

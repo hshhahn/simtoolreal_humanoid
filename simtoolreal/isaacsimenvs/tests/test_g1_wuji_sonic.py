@@ -24,8 +24,12 @@ def main():
     import gymnasium as gym
     import torch
     import isaacsimenvs
-    from isaacsimenvs.tasks.g1_wuji_sonic.env_cfg import EXTRA_OBS_SIZES, G1WujiSonicEnvCfg
-    from isaacsimenvs.tasks.g1_wuji_sonic.robot import RIGHT_ARM_NAMES, RIGHT_HAND_NAMES
+    from isaacsimenvs.tasks.g1_wuji_sonic.env_cfg import (
+        BIMANUAL_OBS_SIZES, EXTRA_OBS_SIZES, G1WujiSonicEnvCfg,
+    )
+    from isaacsimenvs.tasks.g1_wuji_sonic.robot import (
+        RIGHT_ARM_NAMES, RIGHT_HAND_NAMES, LEFT_ARM_NAMES, LEFT_HAND_NAMES,
+    )
     from isaacsimenvs.tasks.simtoolreal.simtoolreal_env_cfg import SimToolRealEnvCfg
     from isaacsimenvs.tasks.simtoolreal.utils.obs_utils import compute_obs_dim
     from isaaclab_tasks.utils import load_cfg_from_registry
@@ -41,7 +45,7 @@ def main():
 
     cfg = load_cfg_from_registry(args.task, "env_cfg_entry_point")
     cfg.scene.num_envs = args.num_envs
-    if args.task == "Isaacsimenvs-G1-Wuji-Sonic-v0":
+    if cfg.reset.fixed_start_pose is None:
         cfg.assets.num_assets_per_type = 1
     cfg.seed = 42
     if args.smooth_right_arm:
@@ -52,22 +56,26 @@ def main():
     env = gym.make(args.task, cfg=cfg)
     robot_env = env.unwrapped
     obs, _ = env.reset()
-    assert cfg.action_space == 67 and robot_env.robot.num_joints == 69
-    assert cfg.observation_space == 432 and cfg.state_space == 454
+    bimanual = cfg.sonic.control_both_hands
+    obs_sizes = BIMANUAL_OBS_SIZES if bimanual else EXTRA_OBS_SIZES
+    assert cfg.action_space == (70 if bimanual else 67)
+    assert robot_env.robot.num_joints == 69
+    assert cfg.observation_space == (457 if bimanual else 432)
+    assert cfg.state_space == (490 if bimanual else 454)
     assert obs["policy"].shape == (args.num_envs, cfg.observation_space)
     assert obs["critic"].shape == (args.num_envs, cfg.state_space)
     assert abs(robot_env.step_dt - 0.02) < 1e-8
     assert not robot_env.robot.is_fixed_base
     assert robot_env.scene.stage.GetPrimAtPath("/World/collisions").IsValid()
-    print("[G1 test] reset and 67-action / 69-joint contract passed", flush=True)
+    print(f"[G1 test] reset and {cfg.action_space}-action / 69-joint contract passed", flush=True)
 
     assert cfg.reward.to_dict() == G1WujiSonicEnvCfg().reward.to_dict()
     assert cfg.reward.to_dict() == SimToolRealEnvCfg().reward.to_dict()
     assert cfg.sonic.latent_rate_penalty == 0.0
     reward_arm_names = [robot_env.robot.data.joint_names[i] for i in robot_env._reward_arm_joint_ids]
     reward_hand_names = [robot_env.robot.data.joint_names[i] for i in robot_env._reward_hand_joint_ids]
-    assert reward_arm_names == list(RIGHT_ARM_NAMES)
-    assert reward_hand_names == list(RIGHT_HAND_NAMES)
+    assert reward_arm_names == list(RIGHT_ARM_NAMES + (LEFT_ARM_NAMES if bimanual else ()))
+    assert reward_hand_names == list(RIGHT_HAND_NAMES + (LEFT_HAND_NAMES if bimanual else ()))
     assert len(robot_env._body_joint_ids) == 29
 
     # Exercise the real reward hook with known simulated joint velocities.
@@ -76,9 +84,9 @@ def main():
     velocities = torch.full_like(positions, 0.7)
     velocities[:, robot_env._reward_arm_joint_ids] = torch.arange(
         -3, 4, device=robot_env.device, dtype=velocities.dtype
-    )
+    ).repeat(2 if bimanual else 1)
     velocities[:, robot_env._reward_hand_joint_ids] = torch.linspace(
-        -2.0, 2.0, 20, device=robot_env.device
+        -2.0, 2.0, len(robot_env._reward_hand_joint_ids), device=robot_env.device
     )
     robot_env.robot.write_joint_state_to_sim(positions, velocities)
     robot_env._get_dones()
@@ -95,7 +103,7 @@ def main():
     )
     assert (robot_env._reward_terms["latent_rate_penalty"] == 0).all()
     obs, _ = env.reset()
-    print("[G1 test] original 0.03/0.003 physical velocity penalties on right arm/hand; latent penalty disabled", flush=True)
+    print(f"[G1 test] original velocity penalties on {len(reward_arm_names)} arm and {len(reward_hand_names)} hand joints; latent penalty disabled", flush=True)
     palm_tip_names = [f"{side}_palm_link" for side in ("left", "right")] + [
         f"{side}_finger{i}_tip_link" for side in ("left", "right") for i in range(1, 6)
     ]
@@ -119,7 +127,7 @@ def main():
     frame_slices = {}
     for group, fields in (("policy", cfg.obs.obs_list), ("critic", cfg.obs.state_list)):
         index = fields.index("sonic_current_proprioception")
-        start = compute_obs_dim(fields[:index], 69, EXTRA_OBS_SIZES)
+        start = compute_obs_dim(fields[:index], 69, obs_sizes)
         frame_slices[group] = slice(start, start + 93)
 
     current_frame_observation_checks = 0
@@ -183,9 +191,11 @@ def main():
     cfg.action.hand_moving_average = 1.0
     test_action = robot_env.initial_policy_action.expand(args.num_envs, -1).clone()
     test_action[:, :64] = torch.linspace(-1.0, 1.0, 64, device=robot_env.device)
-    test_action[:, 64:] = torch.tensor([0.2, 0.4, 0.6], device=robot_env.device)
+    test_action[:, 64:67] = torch.tensor([0.2, 0.4, 0.6], device=robot_env.device)
+    if bimanual:
+        test_action[:, 67:70] = torch.tensor([-0.7, 0.8, -0.2], device=robot_env.device)
     expected = synergy_targets(
-        test_action[:, 64:], robot_env._hand_lower, robot_env._hand_upper
+        test_action[:, 64:67], robot_env._hand_lower, robot_env._hand_upper
     )
     for mode in ("absolute", "residual"):
         cfg.sonic.latent_mode = mode
@@ -203,10 +213,33 @@ def main():
         torch.testing.assert_close(
             robot_env._cur_targets[:, robot_env._hand_joint_ids], expected
         )
-        torch.testing.assert_close(
-            robot_env._cur_targets[:, robot_env._left_hand_joint_ids],
-            robot_env.robot.data.default_joint_pos[:, robot_env._left_hand_joint_ids],
+        left_expected = (
+            synergy_targets(test_action[:, 67:70], robot_env._left_hand_lower, robot_env._left_hand_upper)
+            if bimanual else robot_env.robot.data.default_joint_pos[:, robot_env._left_hand_joint_ids]
         )
+        torch.testing.assert_close(
+            robot_env._cur_targets[:, robot_env._left_hand_joint_ids], left_expected,
+        )
+    if bimanual:
+        right_before = robot_env._cur_targets[:, robot_env._hand_joint_ids].clone()
+        test_action[:, 67:70] = -test_action[:, 67:70]
+        robot_env._pre_physics_step(test_action)
+        torch.testing.assert_close(robot_env._cur_targets[:, robot_env._hand_joint_ids], right_before)
+        left_changed = robot_env._cur_targets[:, robot_env._left_hand_joint_ids]
+        assert not torch.allclose(left_changed, left_expected)
+        torch.testing.assert_close(left_changed, synergy_targets(
+            test_action[:, 67:70], robot_env._left_hand_lower, robot_env._left_hand_upper,
+        ))
+        # Either hand can retain the episode; both hands far away terminate it.
+        assert len(robot_env._fingertip_body_ids) == 10
+        saved_distances = robot_env._curr_fingertip_distances.clone()
+        robot_env._curr_fingertip_distances[:, :5] = 2.0
+        robot_env._curr_fingertip_distances[:, 5:] = 0.1
+        assert not robot_env._hand_far_mask().any()
+        robot_env._curr_fingertip_distances[:] = 2.0
+        assert robot_env._hand_far_mask().all()
+        robot_env._curr_fingertip_distances.copy_(saved_distances)
+        print("[G1 test] independent hand commands, 10 reward fingertips and either-hand retention passed", flush=True)
     cfg.action.hand_moving_average = old_alpha
     cfg.sonic.latent_mode = old_mode
     env.reset()
@@ -216,9 +249,9 @@ def main():
     )
 
     # Check filtering at the actual motor boundary with a non-standing command.
-    if cfg.sonic.smooth_right_arm_targets:
-        arm_ids = robot_env._reward_arm_joint_ids
-        body_indices = robot_env._right_arm_body_indices
+    if robot_env._smoothed_arm_joint_ids:
+        arm_ids = robot_env._smoothed_arm_joint_ids
+        body_indices = robot_env._smoothed_arm_body_indices
         before = robot_env._prev_targets[:, arm_ids].clone()
         robot_env._pre_physics_step(test_action)
         target = robot_env._cur_targets[:, arm_ids]
@@ -247,7 +280,7 @@ def main():
         )
         env.reset()
         assert not robot_env._applied_body_actions.any()
-        print("[G1 test] right-arm rate limit, applied-action history and reset passed", flush=True)
+        print(f"[G1 test] {len(arm_ids)} arm rate limits, applied-action history and reset passed", flush=True)
 
     action = robot_env.initial_policy_action.expand(args.num_envs, -1).clone()
     falls = 0
@@ -255,12 +288,13 @@ def main():
     maximum_drift = 0.0
     maximum_arm_target_speed = 0.0
     for step in range(args.steps):
-        before_arm = robot_env._prev_targets[:, robot_env._reward_arm_joint_ids].clone()
+        arm_ids = robot_env._smoothed_arm_joint_ids
+        before_arm = robot_env._prev_targets[:, arm_ids].clone()
         obs, reward, terminated, truncated, info = env.step(action)
-        if cfg.sonic.smooth_right_arm_targets:
+        if arm_ids:
             survivors = ~(terminated | truncated)
             speeds = (
-                robot_env._cur_targets[:, robot_env._reward_arm_joint_ids] - before_arm
+                robot_env._cur_targets[:, arm_ids] - before_arm
             ).abs()[survivors] / robot_env.step_dt
             if speeds.numel():
                 maximum_arm_target_speed = max(maximum_arm_target_speed, float(speeds.max()))
@@ -355,6 +389,8 @@ def main():
     report = {
         "task": args.task,
         "right_arm_target_smoothing": cfg.sonic.smooth_right_arm_targets,
+        "left_arm_target_smoothing": cfg.sonic.smooth_left_arm_targets,
+        "both_hands_controlled": bimanual,
         "maximum_right_arm_target_speed_rad_s": maximum_arm_target_speed,
         "hand_moving_average": cfg.action.hand_moving_average,
         "tabletop_height_m": cfg.reset.table_reset_z + 0.025,
@@ -375,7 +411,9 @@ def main():
         "decoder_input_checks": decoder_input_checks,
         "latent_modes_checked": ["absolute", "residual"],
         "continuous_wuji": True,
-        "action_dim": 67,
+        "action_dim": cfg.action_space,
+        "reward_fingertips": len(robot_env._fingertip_body_ids),
+        "independent_hand_commands_checked": bimanual,
         "physical_joints": 69,
         "policy_obs_dim": cfg.observation_space,
         "critic_obs_dim": cfg.state_space,

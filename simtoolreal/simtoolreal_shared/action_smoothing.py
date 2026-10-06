@@ -30,6 +30,9 @@ def restore_g1_smoothing_config(cfg, saved_env: dict) -> None:
     cfg.sonic.smooth_right_arm_targets = saved_env.get("sonic", {}).get(
         "smooth_right_arm_targets", False
     )
+    cfg.sonic.smooth_left_arm_targets = saved_env.get("sonic", {}).get(
+        "smooth_left_arm_targets", False
+    )
     saved_action = saved_env.get("action", {})
     for name in ("arm_moving_average", "hand_moving_average", "dof_speed_scale"):
         if name in saved_action:

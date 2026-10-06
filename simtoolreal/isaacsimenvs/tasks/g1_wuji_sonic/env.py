@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 
 from isaaclab.envs import DirectRLEnv
+from isaaclab.utils.math import convert_quat, quat_apply
 
 from simtoolreal_shared.action_smoothing import smooth_arm_targets
 from simtoolreal_shared.physics_guard import (
@@ -33,11 +34,12 @@ from ..simtoolreal.utils.termination_utils import (
     compute_terminations,
     update_tolerance_curriculum,
 )
-from .env_cfg import EXTRA_OBS_SIZES, G1WujiSonicEnvCfg
+from .env_cfg import BIMANUAL_OBS_SIZES, EXTRA_OBS_SIZES, G1WujiSonicEnvCfg
 from .robot import (
     ALL_JOINT_NAMES,
     BODY_JOINT_NAMES,
     RIGHT_ARM_NAMES,
+    LEFT_ARM_NAMES,
     LEFT_HAND_NAMES,
     RIGHT_HAND_NAMES,
     FINGERTIP_NAMES,
@@ -59,9 +61,11 @@ class G1WujiSonicEnv(SimToolRealEnv):
     def __init__(
         self, cfg: G1WujiSonicEnvCfg, render_mode: str | None = None, **kwargs
     ):
-        if cfg.action_space != 67:
+        self._bimanual = cfg.sonic.control_both_hands
+        expected_actions = 70 if self._bimanual else 67
+        if cfg.action_space != expected_actions:
             raise ValueError(
-                "G1/Wuji policy must output 64 SONIC latents + 3 right-hand synergies"
+                f"G1/Wuji requires {expected_actions} policy actions for the selected hands"
             )
         if not math.isclose(cfg.sim.dt * cfg.decimation, 0.02, abs_tol=1e-8):
             raise ValueError("SONIC 1.1 requires a 50 Hz controller period")
@@ -69,19 +73,20 @@ class G1WujiSonicEnv(SimToolRealEnv):
             raise ValueError("SONIC G1 task requires a floating base and gravity")
         if cfg.sonic.latent_mode not in ("absolute", "residual"):
             raise ValueError("sonic.latent_mode must be 'absolute' or 'residual'")
-        if cfg.sonic.smooth_right_arm_targets:
+        if cfg.sonic.smooth_right_arm_targets or cfg.sonic.smooth_left_arm_targets:
             for name in ("arm_moving_average", "hand_moving_average"):
                 value = getattr(cfg.action, name)
                 if not math.isfinite(value) or not 0.0 < value <= 1.0:
                     raise ValueError(f"action.{name} must be finite and in (0, 1]")
             if not math.isfinite(cfg.action.dof_speed_scale) or cfg.action.dof_speed_scale <= 0.0:
                 raise ValueError("action.dof_speed_scale must be finite and positive")
-        hand_action = cfg.sonic.initial_hand_action
-        if len(hand_action) != 3 or any(
-            not math.isfinite(value) or not -1.0 <= value <= 1.0
-            for value in hand_action
+        hand_action = tuple(cfg.sonic.initial_hand_action)
+        if self._bimanual:
+            hand_action += tuple(cfg.sonic.initial_left_hand_action)
+        if len(hand_action) != expected_actions - 64 or any(
+            not math.isfinite(value) or not -1.0 <= value <= 1.0 for value in hand_action
         ):
-            raise ValueError("initial_hand_action must be three values in [-1, 1]")
+            raise ValueError("Each initial hand action must have three values in [-1, 1]")
         if not math.isfinite(cfg.sonic.policy_hand_std_init) or cfg.sonic.policy_hand_std_init <= 0:
             raise ValueError("policy_hand_std_init must be finite and positive")
         if (
@@ -94,24 +99,29 @@ class G1WujiSonicEnv(SimToolRealEnv):
             or cfg.sonic.physics_failure_penalty < 0.0
         ):
             raise ValueError("physics_failure_penalty must be finite and nonnegative")
+        obs_sizes = BIMANUAL_OBS_SIZES if self._bimanual else EXTRA_OBS_SIZES
         cfg.observation_space = compute_obs_dim(
-            cfg.obs.obs_list, len(ALL_JOINT_NAMES), EXTRA_OBS_SIZES
+            cfg.obs.obs_list, len(ALL_JOINT_NAMES), obs_sizes
         )
         cfg.state_space = compute_obs_dim(
-            cfg.obs.state_list, len(ALL_JOINT_NAMES), EXTRA_OBS_SIZES
+            cfg.obs.state_list, len(ALL_JOINT_NAMES), obs_sizes
         )
         self.robot_collision_adjacency = collision_adjacency(cfg.assets.robot_urdf)
         self.pose_viewer_robot_urdf = cfg.assets.robot_urdf
         # Skip the legacy KUKA constructor while retaining the task hooks/math.
         DirectRLEnv.__init__(self, cfg, render_mode, **kwargs)
         apply_physx_material_properties(self)
+        fingertip_names = FINGERTIP_NAMES
+        if self._bimanual:
+            fingertip_names += tuple(f"left_finger{i}_tip_link" for i in range(1, 6))
         allocate_state_buffers(
             self,
             joint_names=ALL_JOINT_NAMES,
             arm_joint_names=BODY_JOINT_NAMES,
             hand_joint_names=RIGHT_HAND_NAMES,
             palm_body_name="right_palm_link",
-            fingertip_body_names=FINGERTIP_NAMES,
+            fingertip_body_names=fingertip_names,
+            num_fingertips=len(fingertip_names),
         )
         if self.robot.num_joints != 69:
             raise ValueError(
@@ -122,16 +132,41 @@ class G1WujiSonicEnv(SimToolRealEnv):
         )[0]
         # SimToolReal penalizes the task arm and hand, not balance joints.
         # Keep the 29-joint body control/observation mapping independent.
-        self._reward_arm_joint_ids = self.robot.find_joints(
+        self._right_arm_joint_ids = self.robot.find_joints(
             list(RIGHT_ARM_NAMES), preserve_order=True
         )[0]
-        self._reward_hand_joint_ids = self._hand_joint_ids
+        self._left_arm_joint_ids = self.robot.find_joints(
+            list(LEFT_ARM_NAMES), preserve_order=True
+        )[0]
+        self._reward_arm_joint_ids = list(self._right_arm_joint_ids)
+        self._reward_hand_joint_ids = list(self._hand_joint_ids)
         self._right_arm_body_indices = [
             BODY_JOINT_NAMES.index(name) for name in RIGHT_ARM_NAMES
         ]
         self._left_hand_joint_ids = self.robot.find_joints(
             list(LEFT_HAND_NAMES), preserve_order=True
         )[0]
+        self._left_hand_lower = self.robot.data.joint_pos_limits[
+            :, self._left_hand_joint_ids, 0
+        ]
+        self._left_hand_upper = self.robot.data.joint_pos_limits[
+            :, self._left_hand_joint_ids, 1
+        ]
+        self._left_palm_body_id = self.robot.find_bodies("left_palm_link")[0][0]
+        if self._bimanual:
+            self._reward_arm_joint_ids += list(self._left_arm_joint_ids)
+            self._reward_hand_joint_ids += list(self._left_hand_joint_ids)
+        smoothed_names = (
+            (RIGHT_ARM_NAMES if cfg.sonic.smooth_right_arm_targets else ())
+            + (LEFT_ARM_NAMES if cfg.sonic.smooth_left_arm_targets else ())
+        )
+        self._smoothed_arm_joint_ids = (
+            self.robot.find_joints(list(smoothed_names), preserve_order=True)[0]
+            if smoothed_names else []
+        )
+        self._smoothed_arm_body_indices = [
+            BODY_JOINT_NAMES.index(name) for name in smoothed_names
+        ]
         self._body_defaults = self.robot.data.default_joint_pos[
             0, self._body_joint_ids
         ].clone()
@@ -196,16 +231,16 @@ class G1WujiSonicEnv(SimToolRealEnv):
             raise ValueError("G1/Wuji requires finite positive simulator velocity limits")
         self._cur_targets[:] = self.robot.data.default_joint_pos
         self._prev_targets[:] = self._cur_targets
-        if cfg.sonic.smooth_right_arm_targets:
+        if self._smoothed_arm_joint_ids:
             print(
-                "[G1/Wuji] Right-arm target smoothing: "
+                f"[G1/Wuji] Target smoothing on {len(self._smoothed_arm_joint_ids)} arm joints: "
                 f"blend={cfg.action.arm_moving_average}, "
                 f"max_target_speed={cfg.action.arm_moving_average * cfg.action.dof_speed_scale} rad/s; "
                 f"hand_blend={cfg.action.hand_moving_average}",
                 flush=True,
             )
         print(
-            f"[G1/Wuji] SONIC 1.1 frozen, FSQ={FSQ_LEVELS} levels; policy=67, robot=69, actor={cfg.observation_space}, critic={cfg.state_space}; mode={cfg.sonic.latent_mode}",
+            f"[G1/Wuji] SONIC 1.1 frozen, FSQ={FSQ_LEVELS} levels; policy={expected_actions}, robot=69, actor={cfg.observation_space}, critic={cfg.state_space}; mode={cfg.sonic.latent_mode}; hands={'both' if self._bimanual else 'right'}",
             flush=True,
         )
 
@@ -246,7 +281,7 @@ class G1WujiSonicEnv(SimToolRealEnv):
         current = self._current_sonic_state()
         self._flush_sonic_history(current)
         data = self.robot.data
-        return {
+        observations = {
             "base_position": data.root_pos_w - self.scene.env_origins,
             "base_gravity": data.projected_gravity_b,
             "base_linear_velocity": data.root_lin_vel_b,
@@ -256,6 +291,18 @@ class G1WujiSonicEnv(SimToolRealEnv):
             "sonic_current_proprioception": torch.cat(list(current.values()), dim=-1),
             "meta_actions": self._meta_actions,
         }
+        if self._bimanual:
+            palm = data.body_state_w[:, self._left_palm_body_id]
+            offset = torch.tensor(self.palm_center_offset, device=self.device).expand(
+                self.num_envs, -1
+            )
+            observations.update(
+                left_palm_pos=palm[:, :3] + quat_apply(palm[:, 3:7], offset)
+                - self.scene.env_origins,
+                left_palm_rot=convert_quat(palm[:, 3:7], to="xyzw"),
+                left_palm_vel=palm[:, 7:13],
+            )
+        return observations
 
     def _reset_idx(self, env_ids) -> None:
         if env_ids is None:
@@ -277,9 +324,9 @@ class G1WujiSonicEnv(SimToolRealEnv):
 
     @torch.no_grad()
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
-        if actions.shape != (self.num_envs, 67):
+        if actions.shape != (self.num_envs, self.cfg.action_space):
             raise ValueError(
-                f"Expected ({self.num_envs}, 67) actions, got {tuple(actions.shape)}"
+                f"Expected ({self.num_envs}, {self.cfg.action_space}) actions, got {tuple(actions.shape)}"
             )
         commands = actions.to(self.device).clamp(-1.0, 1.0)
         dr = self.cfg.domain_randomization
@@ -318,9 +365,9 @@ class G1WujiSonicEnv(SimToolRealEnv):
             min=self._arm_lower, max=self._arm_upper
         )
         self._applied_body_actions.copy_(self._decoded_body_actions)
-        if self.cfg.sonic.smooth_right_arm_targets:
-            arm_ids = self._reward_arm_joint_ids
-            arm_body_indices = self._right_arm_body_indices
+        if self._smoothed_arm_joint_ids:
+            arm_ids = self._smoothed_arm_joint_ids
+            arm_body_indices = self._smoothed_arm_body_indices
             self._cur_targets[:, arm_ids] = smooth_arm_targets(
                 self._prev_targets[:, arm_ids],
                 self._cur_targets[:, arm_ids],
@@ -331,16 +378,29 @@ class G1WujiSonicEnv(SimToolRealEnv):
             self._applied_body_actions[:, arm_body_indices] = (
                 self._cur_targets[:, arm_ids] - self._body_defaults[arm_body_indices]
             ) / self._body_action_scale[arm_body_indices]
-        hand_raw = synergy_targets(commands[:, 64:], self._hand_lower, self._hand_upper)
+        hand_raw = synergy_targets(commands[:, 64:67], self._hand_lower, self._hand_upper)
         alpha = self.cfg.action.hand_moving_average
         self._cur_targets[:, self._hand_joint_ids] = torch.lerp(
             self._prev_targets[:, self._hand_joint_ids], hand_raw, alpha
         )
-        self._cur_targets[:, self._left_hand_joint_ids] = (
-            self.robot.data.default_joint_pos[:, self._left_hand_joint_ids]
-        )
+        if self._bimanual:
+            left_raw = synergy_targets(
+                commands[:, 67:70], self._left_hand_lower, self._left_hand_upper
+            )
+            self._cur_targets[:, self._left_hand_joint_ids] = torch.lerp(
+                self._prev_targets[:, self._left_hand_joint_ids], left_raw, alpha
+            )
+        else:
+            self._cur_targets[:, self._left_hand_joint_ids] = (
+                self.robot.data.default_joint_pos[:, self._left_hand_joint_ids]
+            )
         self._prev_targets.copy_(self._cur_targets)
         apply_wrench_dr(self)
+
+    def _hand_far_mask(self) -> torch.Tensor:
+        """Keep the episode alive if at least one hand remains near the tool."""
+        distances = self._curr_fingertip_distances.reshape(self.num_envs, -1, 5)
+        return distances.amax(dim=-1).amin(dim=-1) > 1.5
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         cfg = self.cfg.sonic

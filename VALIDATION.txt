@@ -303,3 +303,23 @@ GitHub G1/SAPG/smoothing integration verification, 2026-10-06:
   files, SAPG YAML parsed, and staged diff whitespace checked.
 - G1/SAPG implementation files match the previously validated cluster
   sources; existing GPU and distributed validation evidence is above.
+
+G1 two-hand full-tool SAPG verification, 2026-10-06:
+- Added an explicit two-hand task with SONIC64 + right-hand3 + left-hand3,
+  457 actor inputs and 490 privileged critic inputs. Both manipulation arms
+  use target smoothing; both hands receive independent continuous synergies.
+- 26 CPU regression tests passed, including both 70-action SAPG heads,
+  normalization, all six exploration groups and finite PPO gradients.
+- 12-environment GPU verification passed 500 steps with no standing falls.
+  Both hand commands were checked independently, as were all ten reward
+  fingertips, 14 arm / 40 hand velocity penalties, applied SONIC history,
+  FSQ projection, episode resets and a 1e11 rad/s isolated physics fault.
+- The full 1,200-object task passed four SAPG updates at 1,536 environments.
+  All 43 actor/critic checkpoint tensors and 41 core scalar tags were finite.
+  Peak process RSS was 15,782,432 KiB; the process exited successfully.
+- A fresh local 40,000-iteration run is training at 6,144 environments
+  with six exploration groups. Iteration 30 passed with 41 finite core scalar
+  tags and no recorded physics failures. GPU allocation was about 18 GiB;
+  roughly 28 GiB host RAM remained available after scene initialization.
+  The local monitor can reduce environment counts if memory requires it;
+  its state and resource records remain in the local workspace.

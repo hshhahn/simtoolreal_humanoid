@@ -59,7 +59,10 @@ def compute_terminations(env) -> tuple[torch.Tensor, torch.Tensor]:
     else:
         max_successes_reached = torch.zeros_like(fall)
 
-    hand_far = env._curr_fingertip_distances.max(dim=-1).values > 1.5
+    if hasattr(env, "_hand_far_mask"):
+        hand_far = env._hand_far_mask()
+    else:
+        hand_far = env._curr_fingertip_distances.max(dim=-1).values > 1.5
 
     terminated = fall | max_successes_reached | hand_far
     truncated = env.episode_length_buf >= env.max_episode_length

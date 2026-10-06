@@ -76,6 +76,40 @@ Leg, waist, and left-arm outputs retain the direct SONIC path. Its last-action h
 
 ## Verification and training
 
+The two-hand full-tool task is `Isaacsimenvs-G1-Wuji-Sonic-Bimanual-v0`.
+It jointly predicts SONIC64, right-hand3, and left-hand3 (70 actions). Each
+hand uses independent thumb opposition, thumb bending, and shared bending
+of the other four fingers. There is one tool per environment, which can be
+handled by either hand or both. Initial object positions span both sides of
+the table; all six tool families and the 1,200-object pool are retained.
+
+The actor receives 457 current-frame values, including all ten fingertips,
+left and right palm poses, and the previous 70-dimensional policy action.
+The asymmetric critic receives 490 values. SAPG additionally conditions on
+its exploration coefficient. The SONIC decoder retains its own ten-frame
+history. Both arms use the target limiter and both hands use finger-target
+smoothing. The approach term covers all ten fingertips; the existing 0.03
+and 0.003 velocity coefficients apply to the 14 arm joints and 40 finger
+joints. Other reward coefficients, keypoint goals, and fall handling follow
+the existing G1 task. The episode can continue while either hand remains
+near the tool; it does not require simultaneous two-hand contact.
+
+```bash
+./verify_g1_wuji_sonic.sh \
+  --task Isaacsimenvs-G1-Wuji-Sonic-Bimanual-v0 \
+  --num_envs 12 --steps 500 --headless
+
+./run_g1_wuji_bimanual_sapg_training.sh \
+  'hydra.run.dir=../g1_wuji_runs/${now:%Y%m%d_%H%M%S}_bimanual_sapg'
+```
+
+The local SAPG launcher defaults to 6,144 environments, six exploration
+groups, 24,576-sample actor/critic minibatches, and 40,000 iterations. It
+starts a fresh 70-action policy. Its checkpoints and curves are under the
+run's `0_g1_wuji_bimanual_sapg/nn/`, `best/model.pth`, and `summaries/`.
+Reduce environment, block, and both minibatch counts together if needed.
+The Slurm launcher also accepts `TASK=Isaacsimenvs-G1-Wuji-Sonic-Bimanual-v0`.
+
 On a GPU workstation or inside a GPU allocation:
 
 ```bash
