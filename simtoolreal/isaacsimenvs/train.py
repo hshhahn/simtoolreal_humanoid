@@ -55,6 +55,7 @@ def main() -> None:
         default="resume",
         help="resume restores optimizer/rollout/env state; weights starts fresh from model weights.",
     )
+    parser.add_argument("--distributed", action="store_true", help="Train one policy across torchrun GPU ranks")
     parser.add_argument("--rl_device", default="cuda:0")
     parser.add_argument("--sim_device", default="cuda:0")
     # --- Video ---
@@ -95,6 +96,14 @@ def main() -> None:
     # --- AppLauncher flags (--headless, --enable_cameras, etc.) ---
     AppLauncher.add_app_launcher_args(parser)
     args_cli, hydra_args = parser.parse_known_args()
+    global_rank = int(os.environ.get("RANK", "0")) if args_cli.distributed else 0
+    if args_cli.distributed:
+        if args_cli.test:
+            parser.error("--distributed is for training")
+        if int(os.environ.get("WORLD_SIZE", "1")) < 2:
+            parser.error("--distributed requires torchrun with at least two GPU ranks")
+        local_rank = int(os.environ["LOCAL_RANK"])
+        args_cli.sim_device = args_cli.rl_device = args_cli.device = f"cuda:{local_rank}"
 
     # Recording a video requires cameras even if user forgot --enable_cameras.
     if args_cli.capture_video:
@@ -128,7 +137,9 @@ def main() -> None:
         env_cfg.sim.device = args_cli.sim_device
         # Keep simulator/object randomization and the policy runner on the same
         # seed. Previously only rl_games saw the agent seed override.
-        env_cfg.seed = int(agent_cfg["params"]["seed"])
+        env_cfg.seed = int(agent_cfg["params"]["seed"]) + global_rank
+        if args_cli.distributed:
+            agent_cfg["params"]["config"]["multi_gpu"] = True
 
         # render_mode="rgb_array" makes DirectRLEnv.render() lazily create a
         # single omni.replicator render_product at cfg.viewer.cam_prim_path —
@@ -186,8 +197,9 @@ def main() -> None:
             clip_actions=clip_actions,
         )
 
-        observers = [EnvStatsAlgoObserver()]
-        if args_cli.wandb_activate:
+        stats_observer = EnvStatsAlgoObserver()
+        observers = [stats_observer]
+        if args_cli.wandb_activate and global_rank == 0:
             from isaacsimenvs.utils.wandb_utils import WandbAlgoObserver
 
             # WandbAlgoObserver expects attribute access (cfg.wandb_project,
@@ -210,22 +222,39 @@ def main() -> None:
         runner = Runner(MultiObserver(observers))
         # Co-locate rl_games artifacts (checkpoints, summaries) with the Hydra
         # run dir so slurm logs + config + videos all live together.
-        agent_cfg["params"]["config"]["train_dir"] = hydra_run_dir
+        agent_cfg["params"]["config"]["train_dir"] = (
+            os.environ.get("SIMTOOLREAL_RUN_DIR", hydra_run_dir)
+            if args_cli.distributed else hydra_run_dir
+        )
         agent_cfg["params"]["config"]["device"] = args_cli.rl_device
         agent_cfg["params"]["config"]["device_name"] = args_cli.rl_device
 
         runner.load(agent_cfg)
         runner.reset()
-        runner.run(
-            {
-                "train": not args_cli.test,
-                "play": args_cli.test,
-                "checkpoint": args_cli.checkpoint,
-                "checkpoint_load_mode": args_cli.checkpoint_load_mode,
-            }
-        )
+        try:
+            runner.run(
+                {
+                    "train": not args_cli.test,
+                    "play": args_cli.test,
+                    "checkpoint": args_cli.checkpoint,
+                    "checkpoint_load_mode": args_cli.checkpoint_load_mode,
+                }
+            )
+            if args_cli.distributed:
+                from isaacsimenvs.utils.distributed import verify_training_ranks
+                verify_training_ranks(stats_observer.algo, env_cfg.seed, env.unwrapped.device)
+        finally:
+            # The forced Kit exit below bypasses TensorBoard's atexit cleanup.
+            # Close the writer while queued events can still reach shared storage.
+            if stats_observer.writer is not None:
+                stats_observer.writer.close()
 
     run()
+
+    if args_cli.distributed:
+        import torch.distributed as dist
+        dist.barrier()
+        dist.destroy_process_group()
 
     # Kit shutdown hangs (per CLAUDE.md + isaacsim_conversion/distill.py).
     del app

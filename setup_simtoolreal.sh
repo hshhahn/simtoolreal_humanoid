@@ -14,7 +14,9 @@ for simtoolreal_arg in "$@"; do
 done
 export UV_CACHE_DIR="${UV_CACHE_DIR:-${simtoolreal_workspace}/.cache/uv}"
 export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-${simtoolreal_workspace}/.tools/python}"
-if [[ -x /snap/astral-uv/current/bin/uv ]]; then
+if [[ -x "${simtoolreal_workspace}/.tools/uv/uv" ]]; then
+    simtoolreal_uv="${simtoolreal_workspace}/.tools/uv/uv"
+elif [[ -x /snap/astral-uv/current/bin/uv ]]; then
     simtoolreal_uv=/snap/astral-uv/current/bin/uv
 else
     simtoolreal_uv="$(command -v uv || true)"

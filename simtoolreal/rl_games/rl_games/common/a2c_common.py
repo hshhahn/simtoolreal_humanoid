@@ -105,10 +105,20 @@ class A2CBase(BaseAlgorithm):
             # total number of GPUs across all nodes
             self.world_size = int(os.getenv("WORLD_SIZE", "1"))
 
-            import hashlib
-            dist.init_process_group("gloo", rank=self.global_rank, world_size=self.world_size, init_method=f'tcp://127.0.0.1:{23400 + int(hashlib.md5(self.experiment_name[3:].encode("utf-8")).hexdigest(), 16) % 500}')
-
-            self.device_name = 'cuda:0' # DEBUG
+            # torchrun supplies rendezvous variables and the trainer supplies
+            # the rank's simulation/RL device. Keep isolated-GPU legacy launches
+            # working by honoring their explicitly configured cuda:0 device.
+            self.device_name = config.get('device', f'cuda:{self.local_rank}')
+            if str(self.device_name).startswith('cuda'):
+                torch.cuda.set_device(self.device_name)
+            if not dist.is_initialized():
+                backend = config.get('distributed_backend', 'nccl' if str(self.device_name).startswith('cuda') else 'gloo')
+                if os.getenv('MASTER_ADDR') and os.getenv('MASTER_PORT'):
+                    dist.init_process_group(backend, init_method='env://')
+                else:
+                    import hashlib
+                    port = 23400 + int(hashlib.md5(self.experiment_name[3:].encode("utf-8")).hexdigest(), 16) % 500
+                    dist.init_process_group(backend, rank=self.global_rank, world_size=self.world_size, init_method=f'tcp://127.0.0.1:{port}')
             config['device'] = self.device_name
             if self.global_rank != 0:
                 config['print_stats'] = False
@@ -157,6 +167,9 @@ class A2CBase(BaseAlgorithm):
 
         self.self_play = config.get('self_play', False)
         self.save_freq = config.get('save_frequency', 0)
+        self.save_latest_freq = config.get('save_latest_frequency', 200)
+        if self.save_latest_freq < 1:
+            raise ValueError('save_latest_frequency must be positive')
         self.save_best_after = config.get('save_best_after', 100)
         self.print_stats = config.get('print_stats', True)
         self.rnn_states = None
@@ -1225,10 +1238,15 @@ class DiscreteA2CBase(A2CBase):
 
         if self.multi_gpu:
             torch.cuda.set_device(self.local_rank)
-            print("====================broadcasting parameters")
-            model_params = [self.model.state_dict()]
-            dist.broadcast_object_list(model_params, 0)
-            self.model.load_state_dict(model_params[0])
+            print("====================broadcasting actor and critic parameters")
+            # Rank seeds differ for rollouts; both networks must start equally.
+            # Tensor broadcasts avoid unpickling rank-0 CUDA tensors on peers.
+            models = [self.model]
+            if self.has_central_value:
+                models.append(self.central_value_net.model)
+            for model in models:
+                for tensor in model.state_dict().values():
+                    dist.broadcast(tensor, src=0)
 
         while True:
             epoch_num = self.update_epoch()
@@ -1543,10 +1561,15 @@ class ContinuousA2CBase(A2CBase):
         self.curr_frames = self.batch_size_envs
 
         if self.multi_gpu:
-            print("====================broadcasting parameters")
-            model_params = [self.model.state_dict()]
-            dist.broadcast_object_list(model_params, 0)
-            self.model.load_state_dict(model_params[0])
+            print("====================broadcasting actor and critic parameters")
+            # Rank seeds differ for rollouts; both networks must start equally.
+            # Tensor broadcasts avoid unpickling rank-0 CUDA tensors on peers.
+            models = [self.model]
+            if self.has_central_value:
+                models.append(self.central_value_net.model)
+            for model in models:
+                for tensor in model.state_dict().values():
+                    dist.broadcast(tensor, src=0)
             
         # for _ in range(0):
         #     self.play_steps()
@@ -1586,14 +1609,30 @@ class ContinuousA2CBase(A2CBase):
                 if self.has_soft_aug:
                     self.writer.add_scalar('losses/aug_loss', np.mean(aug_losses), frame)
 
+                all_state_dict = None
                 if self.multi_gpu:
-                    # gather state from all gpus
-                    state = self.get_full_state_weights()
-                    state_list = [None] * self.world_size
-                    dist.gather_object(state, state_list)
-                    all_state_dict = {i: state_list[i] for i in range(self.world_size)}
-                else:
-                    all_state_dict = None
+                    # Gather the large optimizer/rollout state only when a
+                    # checkpoint will be written, not on every training epoch.
+                    checkpoint_due = (
+                        (self.max_epochs != -1 and epoch_num >= self.max_epochs)
+                        or (self.max_frames != -1 and self.frame >= self.max_frames)
+                    )
+                    if self.game_rewards.current_size > 0:
+                        reward = self.game_rewards.get_mean()[0]
+                        checkpoint_due = checkpoint_due or (reward > self.last_mean_rewards and epoch_num >= 10)
+                        if self.save_freq > 0:
+                            periodic = (
+                                int(math.sqrt(epoch_num // self.save_freq)) ** 2 == epoch_num // self.save_freq
+                                and epoch_num % self.save_freq == 0
+                            )
+                            checkpoint_due = checkpoint_due or periodic or epoch_num % self.save_latest_freq == 0
+                    checkpoint_due_t = torch.tensor(bool(checkpoint_due), device=self.ppo_device)
+                    dist.broadcast(checkpoint_due_t, src=0)
+                    if checkpoint_due_t.item():
+                        state = self.get_full_state_weights()
+                        state_list = [None] * self.world_size
+                        dist.gather_object(state, state_list)
+                        all_state_dict = {i: state_list[i] for i in range(self.world_size)}
 
                 if self.game_rewards.current_size > 0:
                     mean_rewards = self.game_rewards.get_mean()
@@ -1617,11 +1656,16 @@ class ContinuousA2CBase(A2CBase):
                     self.writer.add_histogram('auxiliary_stats/off_policy_contrib', np.array(extra_infos['off_policy_contrib']), frame)
                     self.writer.add_histogram('auxiliary_stats/on_policy_contrib', np.array(extra_infos['on_policy_contrib']), frame)
 
-                    on_policy_grads = torch.stack(extra_infos['on_policy_grads'])
-                    off_policy_grads = torch.stack(extra_infos['off_policy_grads'])
-
-                    self.writer.add_scalar('auxiliary_stats/off_on_grad_similarity', torch.cosine_similarity(on_policy_grads, off_policy_grads).diag().mean(),frame)
-                    self.writer.add_scalar('auxiliary_stats/off_on_relative_grad_norms', torch.norm(off_policy_grads, dim=-1).mean()/torch.norm(on_policy_grads, dim=-1).mean(), frame)
+                    if extra_infos['on_policy_grads'][0] is not None:
+                        on_policy_grads = torch.stack(extra_infos['on_policy_grads']).float()
+                        off_policy_grads = torch.stack(extra_infos['off_policy_grads']).float()
+                        if torch.isfinite(on_policy_grads).all() and torch.isfinite(off_policy_grads).all():
+                            similarity = torch.cosine_similarity(on_policy_grads, off_policy_grads, dim=-1).mean()
+                            self.writer.add_scalar('auxiliary_stats/off_on_grad_similarity', similarity, frame)
+                            on_norm = torch.norm(on_policy_grads, dim=-1).mean()
+                            if on_norm > 0:
+                                relative_norm = torch.norm(off_policy_grads, dim=-1).mean() / on_norm
+                                self.writer.add_scalar('auxiliary_stats/off_on_relative_grad_norms', relative_norm, frame)
                     
                     if extra_infos['mb_intr_rewards'] is not None:
                         if hasattr(self, 'intr_coef_block_size'):
@@ -1643,7 +1687,7 @@ class ContinuousA2CBase(A2CBase):
                     if self.save_freq > 0:
                         if int(math.sqrt(epoch_num // self.save_freq)) ** 2 == epoch_num // self.save_freq and epoch_num % self.save_freq == 0:
                             self.save(os.path.join(self.nn_dir, 'last_' + checkpoint_name), all_state_dict)
-                        if epoch_num % 200 == 0:    
+                        if epoch_num % self.save_latest_freq == 0:
                             torch_ext.safe_filesystem_op(os.makedirs, os.path.join(self.experiment_dir, 'last'), exist_ok=True)
                             if os.path.exists(os.path.join(self.experiment_dir, 'last', 'model.pth')):
                                 os.system(f"cp {os.path.join(self.experiment_dir, 'last', 'model.pth')} {os.path.join(self.experiment_dir, 'last', 'model.pth.old')}")
@@ -1685,8 +1729,11 @@ class ContinuousA2CBase(A2CBase):
                 update_time = 0
             else:
                 if self.multi_gpu:
-                    state = self.get_full_state_weights()
-                    dist.gather_object(state)
+                    checkpoint_due_t = torch.tensor(False, device=self.ppo_device)
+                    dist.broadcast(checkpoint_due_t, src=0)
+                    if checkpoint_due_t.item():
+                        state = self.get_full_state_weights()
+                        dist.gather_object(state)
 
             if self.multi_gpu:
                 should_exit_t = torch.tensor(should_exit, device=self.device).float()

@@ -1,8 +1,8 @@
 # SimToolReal humanoid
 
-This repository contains our modified [SimToolReal](https://github.com/tylerlum/simtoolreal) environment for a free-standing Unitree G1 with two original Wuji hands. PPO predicts a frozen SONIC 1.1 controller's latent command and three right-hand commands jointly. Both feed-forward and LSTM policies are included.
+This repository contains our modified [SimToolReal](https://github.com/tylerlum/simtoolreal) environment for a free-standing Unitree G1 with two original Wuji hands. PPO predicts a frozen SONIC 1.1 controller's latent command and three right-hand commands jointly. Feed-forward PPO, LSTM PPO, and distributed SAPG policies are included.
 
-The humanoid task is marker lifting over a lowered table. This is an experimental environment and controller integration; the existing humanoid training trials have not demonstrated successful sustained grasping. The current fixed-KUKA comparison uses the original SHARPA dexterous hand and SAPG on the same two-marker asset pool. The earlier parallel-gripper baseline is also included. Robot assets, environment code, agent configurations, and setup scripts are included. SONIC weights are downloaded from their pinned upstream revision during humanoid setup.
+The current humanoid training task uses all six tool families with randomized initial object poses and pose goals. Full four-GPU SAPG training starts from scratch with right-arm and hand target smoothing. This is an experimental G1/SONIC adaptation of SimToolReal. The fixed-KUKA comparison uses the original SHARPA dexterous hand and SAPG on the two-marker pool; the earlier parallel-gripper baseline is also included. Robot assets, environment code, agent configurations, and setup scripts are included. SONIC weights are downloaded from their pinned upstream revision during humanoid setup.
 
 ## Installation
 
@@ -42,8 +42,9 @@ The original arm demo policy is optional and separate from humanoid training. In
 | Actor input | 432 values, including current-frame observations and the previous 67-dimensional action |
 | Privileged critic input | 454 values |
 | SONIC decoder history | 10 frames of 93-dimensional proprioception; 930 history values plus 64 latent values |
-| MLP | 1024, 512, 256, 128 units with ELU |
-| LSTM variant | One 1024-unit layer before the same MLP; sequence length 16 |
+| PPO MLP | 1024, 512, 256, 128 units with ELU |
+| LSTM PPO | One 1024-unit layer before the PPO MLP; sequence length 16 |
+| SAPG | LSTM 1024 + MLP 1024, 1024, 512, 512; six exploration groups; asymmetric MLP critic |
 | Simulation | 200 Hz physics, 50 Hz control, 128 parallel environments by default |
 
 The decoder is frozen. PPO evaluates the continuous policy samples for its likelihood calculation; FSQ projection happens at the environment's decoder boundary. The left hand is held open. The right-hand policy starts with standard deviation 0.5, independently of the body latent exploration.
@@ -58,7 +59,20 @@ The task retains SimToolReal's fingertip approach, lift shaping, one-shot lift b
 
 Objects use the existing four selected bounding-box corners for the goal formulation. The marker box is `(0.141, 0.03025, 0.0271)` metres; keypoint scale 1.5 and position tolerance 0.075 produce an effective 0.1125 m threshold. Success requires ten accumulated qualifying steps. The lift reward alone does not establish a grasp and can reward tossing an object.
 
-The complete settings are in [env_cfg.py](simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env_cfg.py), [env.py](simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env.py), and the inherited [SimToolReal configuration](simtoolreal/isaacsimenvs/tasks/simtoolreal/simtoolreal_env_cfg.py). The full object distribution remains available as `Isaacsimenvs-G1-Wuji-Sonic-v0`.
+The complete settings are in [env_cfg.py](simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env_cfg.py), [env.py](simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env.py), and the inherited [SimToolReal configuration](simtoolreal/isaacsimenvs/tasks/simtoolreal/simtoolreal_env_cfg.py). The full task, `Isaacsimenvs-G1-Wuji-Sonic-v0`, uses all six tool families (hammer, screwdriver, marker, spatula, eraser, brush), randomized initial object poses, and sampled position/orientation goals. Its default pool contains 1,200 procedural objects: 100 size/density samples from each of the 12 shape distributions. The lift curriculum retains its explicit two-marker pool.
+
+## Manipulation target smoothing
+
+Enable dex-hand-style limits with these Hydra overrides:
+
+    env.sonic.smooth_right_arm_targets=true
+    env.action.arm_moving_average=0.1
+    env.action.dof_speed_scale=1.5
+    env.action.hand_moving_average=0.1
+
+The seven right-arm joint targets approach the decoded SONIC pose with a maximum raw change of 1.5 times the policy timestep, followed by the 0.1 blend. Their effective target speed is limited to 0.15 rad/s (0.003 rad per 50 Hz update). This preserves absolute SONIC pose requests; it does not reinterpret latent coordinates as joint velocities. Finger targets move 10% toward the requested synergy pose each update. Actual joint speeds can exceed target speeds while tracking a command.
+
+Leg, waist, and left-arm outputs retain the direct SONIC path. Its last-action history records the filtered right-arm commands actually applied. Smoothing is an explicit run setting and is restored by checkpoint video replay; older saved configurations keep their original unsmoothed arm behavior.
 
 ## Verification and training
 
@@ -70,9 +84,9 @@ On a GPU workstation or inside a GPU allocation:
   --num_envs 4 --steps 500 --headless
 ```
 
-For Slurm, follow [SLURM_SETUP.md](SLURM_SETUP.md). It includes a verification job and separate MLP/LSTM training submissions. [CODEX_SETUP_PROMPT.txt](CODEX_SETUP_PROMPT.txt) is a prompt for the agent setting up the server.
+For Slurm, follow [SLURM_SETUP.md](SLURM_SETUP.md). It includes verification, separate MLP/LSTM training submissions, and a single SAPG run distributed across four GPUs. [CODEX_SETUP_PROMPT.txt](CODEX_SETUP_PROMPT.txt) is a prompt for the agent setting up the server.
 
-The fresh local installation passed the controller checks, 13 CPU regression tests, 500 simulation steps, and two PPO iterations of each architecture with checkpoint and TensorBoard output. See [VALIDATION.txt](VALIDATION.txt); the target Slurm cluster still needs its own verification run.
+The fresh local installation passed the controller checks, 13 CPU regression tests, 500 simulation steps, and two PPO iterations of each architecture with checkpoint and TensorBoard output. See [VALIDATION.txt](VALIDATION.txt); the native `fang-compute-01` Slurm installation also passed these checks on allocation `991133`.
 
 To train directly on an allocated GPU, run one of these from the checkout root:
 
@@ -85,6 +99,38 @@ To train directly on an allocated GPU, run one of these from the checkout root:
   agent.params.config.max_epochs=40000 \
   'hydra.run.dir=../g1_wuji_runs/${now:%Y%m%d_%H%M%S}_lstm'
 ```
+
+To train one SAPG policy using all four GPUs in the current allocation:
+
+```bash
+srun --jobid=991133 --overlap --exact --ntasks=1 --cpus-per-task=32 \
+  --gpus-per-task=4 bash -lc \
+  'cd /home/sh2776/simtoolreal_humanoid && TASK=Isaacsimenvs-G1-Wuji-Sonic-v0 MAX_EPOCHS=1000000 bash slurm/run_sapg.sh \
+    env.sonic.smooth_right_arm_targets=true \
+    env.action.arm_moving_average=0.1 env.action.dof_speed_scale=1.5 \
+    env.action.hand_moving_average=0.1'
+```
+
+The SAPG launcher defaults to 24,576 environments and a nominal minibatch of
+98,304 samples **across all four GPUs**. Each rank owns 6,144 environments
+and a 24,576-sample minibatch. Override global counts with `NUM_ENVS` and
+`MINIBATCH_SIZE`; six exploration groups run on each rank. The SAPG
+configuration follows the released SimToolReal code's entropy scale 0.002.
+The launcher defaults to 1,000,000 epochs and writes a rolling recovery
+checkpoint every 100 epochs, keeping the previous recovery file as well.
+This is a G1/SONIC adaptation on Isaac Sim. The original paper used Isaac Gym
+and a different robot.
+
+Rank logs, TensorBoard curves, checkpoints, resource measurements, and final
+actor/critic synchronization checks are written under `g1_wuji_runs/`.
+Before the velocity-penalty update, the full 24,576-env setup passed 12
+epochs on all four A6000s, with finite checkpoints and 1,086 finite
+TensorBoard scalars. Peak sampled memory was
+19.4 GiB on the busiest GPU and 150.1 GiB of host RAM. The launcher rejects reused output directories and stops the training process
+if host memory reaches 90% of the Slurm allocation's limit.
+See [SLURM_SETUP.md](SLURM_SETUP.md) for configuration and batch submission.
+
+Omit `--checkpoint` to start the task actor and asymmetric critic from their default initialization, with fresh optimizers, normalization, and iteration counters. The frozen pretrained SONIC controller and standing latent reference remain part of the G1 control architecture.
 
 `max_epochs` is the total PPO iteration limit, including iterations restored from a checkpoint. Use `--checkpoint /absolute/path/model.pth` to resume with the matching architecture, or add `--checkpoint_load_mode weights` to start a new optimizer from model weights.
 

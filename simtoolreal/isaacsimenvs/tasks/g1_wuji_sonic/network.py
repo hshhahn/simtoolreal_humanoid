@@ -39,8 +39,13 @@ class SonicPolicyBuilder(A2CBuilder):
         if hand_std is not None:
             if not math.isfinite(hand_std) or hand_std <= 0:
                 raise ValueError("hand_std_init must be finite and positive")
-            if kwargs["actions_num"] != 67 or network.sigma.shape != (67,):
-                raise ValueError("Wuji exploration requires 67 state-independent log-stds")
+            if (
+                kwargs["actions_num"] != 67
+                or not isinstance(network.sigma, torch.Tensor)
+                or network.sigma.ndim not in (1, 2)
+                or network.sigma.shape[-1] != 67
+            ):
+                raise ValueError("Wuji exploration requires 67 log-stds per exploration group")
             with torch.no_grad():
-                network.sigma[64:] = math.log(hand_std)
+                network.sigma[..., 64:] = math.log(hand_std)
         return network

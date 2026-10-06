@@ -17,7 +17,10 @@ if [[ ! -x "${_g1_workspace}/simtoolreal/.venv_isaacsim/bin/python" ]]; then
 fi
 source "${_g1_workspace}/activate_simtoolreal.sh"
 export HF_HOME="${_g1_workspace}/.cache/huggingface"
-_g1_uv=/snap/astral-uv/current/bin/uv
+_g1_uv="${_g1_workspace}/.tools/uv/uv"
+if [[ ! -x "${_g1_uv}" ]]; then
+    _g1_uv=/snap/astral-uv/current/bin/uv
+fi
 if [[ ! -x "${_g1_uv}" ]]; then
     _g1_uv="$(command -v uv)"
 fi

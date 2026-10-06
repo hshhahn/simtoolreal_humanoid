@@ -24,9 +24,7 @@ Passed:
 - Slurm command routing with an emulated allocation: four-job array uses
   MLP/LSTM at seeds 42/43 and preserves CUDA_VISIBLE_DEVICES.
 
-The target Slurm cluster has not been tested from this workstation. Submit
-slurm/verify.sbatch on that cluster before a long training job. These checks
-verify installation and execution; they do not demonstrate learned grasping.
+The workstation checks above verify installation and execution. Cluster validation is recorded separately below.
 
 Parallel-gripper baseline, 2026-10-05:
 - Configuration parity with the original SimToolReal reset/goal sampling,
@@ -123,3 +121,185 @@ KUKA + SHARPA SAPG comparison verification, 2026-10-05:
   checkpoints, TensorBoard events and pose viewers remain on disk.
 - These checks validate configuration and training execution; they do not
   establish learned grasping or explain the humanoid flicking behavior.
+
+Cluster validation, 2026-10-05
+
+Installation, downloads, all CPU checks, and GPU checks ran through srun
+inside allocation 991133 on fang-compute-01.cs.cornell.edu. The login node
+only dispatched Slurm commands after the compute-only requirement was set.
+
+Native stack: Ubuntu 24.04.4, glibc 2.39, NVIDIA driver 570.124.06,
+Python 3.11.16, Isaac Sim 5.1.0.0, Isaac Lab 2.3.2.post1,
+PyTorch 2.7.0+cu128, NumPy 1.26.0, and vendored rl_games 1.6.1.
+The setup and activation scripts recognize checkout-local uv at .tools/uv/uv.
+
+Passed:
+- CUDA matrix computation on each of the four allocated 48 GB RTX A6000s.
+- All six pinned SONIC 1.1 file SHA-256 checks.
+- SONIC Torch versus ONNX maximum error 1.01e-06 and hand synergy contract.
+- All 13 CPU regression tests.
+- Four marker-lift environments for 500 steps: finite physics, zero falls,
+  minimum base height 0.755 m, maximum base drift 0.158 m.
+- Injected fall and 1e11 rad/s velocity fault termination and isolated reset.
+- Two PPO iterations with 128 environments for each architecture.
+- One loadable checkpoint and 104 finite TensorBoard scalars per architecture.
+- Finite tensors in both serialized checkpoints.
+- Shell syntax and git diff whitespace checks.
+
+The training launcher now closes the TensorBoard writer before its forced
+Isaac Sim exit. Without that cleanup, the short cluster smoke runs exited
+before buffered events reached shared storage and left empty event files.
+
+Evidence:
+- slurm_logs/setup_991133.log
+- slurm_logs/gpu_probe_991133.json
+- slurm_logs/environment_991133.txt
+- slurm_logs/verify_991133_final.log
+- g1_wuji_runs/991133_0_verify_final/verification-summary.json
+- g1_wuji_runs/991133_0_verify_final/environment-verification.json
+- g1_wuji_runs/991133_0_verify_final/smoke_rl_games_cfg_entry_point/
+- g1_wuji_runs/991133_0_verify_final/smoke_rl_games_lstm_cfg_entry_point/
+
+Only short verification runs were performed. These checks verify installation
+and execution; they do not demonstrate learned grasping. Re-run verification
+on a different node or after changing the driver or environment.
+
+Distributed G1 SAPG validation, 2026-10-05
+
+All edits, CPU tests, CUDA/NCCL checks, and training ran on fang-compute-01
+via allocation 991133. No worker ran on the login node.
+
+Changes:
+- Registered G1 SAPG, using the released SimToolReal LSTM/MLP backbone.
+- Initialized all six coefficient-conditioned hand exploration rows.
+- Assigned each torchrun rank its own simulation/RL GPU and seed.
+- Used NCCL averaged gradients and synchronized actor and asymmetric critic.
+- Isolated Kit caches/logs and Hydra metadata per rank.
+- Gathered checkpoint state only when saving, and disabled unused gradient
+  diagnostic copies. AMP overflow in those unused diagnostic vectors had
+  produced one NaN scalar in the initial 6,144-env capacity trial; model
+  parameters remained finite. The final full-scale run has no NaN scalars.
+- Added resource sampling, a host-RAM guard, and an end-to-end run verifier.
+
+Passed:
+- Four-rank NCCL all_reduce, object broadcast, and checkpoint-state gather.
+- 14 CPU regression tests, including all six SAPG exploration groups.
+- Two-epoch distributed smoke test at 384 global envs: exact actor/critic
+  parameter and normalization-buffer agreement; 60 finite scalar values.
+- Full-scale 12-epoch trial: 24,576 global envs, 98,304 nominal global
+  minibatch, six global exploration blocks of 4,096 envs.
+- Each rank: 6,144 envs, nominal minibatch 24,576, exploration block 1,024,
+  horizon/sequence length 16, two mini-epochs, seed 42 + rank.
+- Exact actor and critic parameter/buffer agreement across all four GPUs.
+- 1,086 finite TensorBoard scalar values.
+- Loadable checkpoint with all four rank states and 468 finite saved tensors.
+- All four GPUs reached 100% utilization. Peak sampled device memory:
+  19.4 / 18.0 / 17.4 / 17.9 GiB; host peak 150.1 GiB of 256 GiB.
+- RAM guard did not trigger. No CUDA or host OOM.
+- Python/Bash syntax and git diff whitespace checks.
+
+Evidence:
+- slurm_logs/nccl_probe_991133.log
+- g1_wuji_runs/991133_sapg_smoke_4gpu/distributed-verification.json
+- g1_wuji_runs/991133_sapg_capacity_6144/resources.summary.json
+- slurm_logs/sapg_fullscale_12ep_991133.log
+- g1_wuji_runs/991133_sapg_fullscale_12ep/verification-summary.json
+- g1_wuji_runs/991133_sapg_fullscale_12ep/distributed-verification.json
+- g1_wuji_runs/991133_sapg_fullscale_12ep/resources.summary.json
+
+The earlier 100-epoch marker-lift SAPG run completed with the old reward.
+Its artifacts remain under g1_wuji_runs/991133_sapg_marker_100ep/.
+These results validate the G1/SONIC adaptation on Isaac Sim; learned grasping
+is a separate evaluation. Entropy scale 0.002 follows the released code,
+rather than table I's 0.005.
+
+
+GitHub joint-velocity update and full training, 2026-10-05
+
+Applied commit 1598192e0b8a41024e79a14d796a338b8b7cec2e's five source/test
+files exactly, retaining the local distributed SAPG changes. The reward now
+uses seven right-arm joints at scale 0.03 and twenty right-hand joints at
+scale 0.003, with zero SONIC latent-rate penalty. Balance and left-arm joints
+remain in body control and observations, but are outside this penalty.
+
+Passed on Slurm compute:
+- 512 randomized legacy reward cases matched the previous reward exactly.
+- 9 CPU physics, exploration, and LSTM regression tests.
+- Five checkpoint alias regression tests.
+- Four-environment, 500-step GPU marker-lift integration:
+  finite states, zero standing falls, reward accounting, correct joint groups,
+  isolated resets, and recovery after injected physics faults.
+- Python/Bash syntax and git diff whitespace checks.
+
+Evidence:
+- slurm_logs/velocity_penalty_cpu_991133.json
+- slurm_logs/velocity_penalty_gpu_991133.log
+- g1_wuji_runs/991133_velocity_penalty_validation/environment-verification.json
+
+Full training launched fresh as Slurm step 991133.99, using all four A6000s,
+24,576 global envs, nominal global minibatch 98,304, seeds 42 through 45,
+and a 1,000,000-epoch limit. Recovery checkpoints save every 100 epochs.
+Run: g1_wuji_runs/991133_sapg_g1_full_1598192/
+Launch log: slurm_logs/sapg_g1_full_1598192_991133.log
+Provenance: training-plan.json, source-diff.patch, and source-files/ in the run.
+The existing allocation ends 2026-10-08 11:18:30 EDT.
+
+
+Full-run startup configuration check:
+- All four ranks loaded 6,144 environments and nominal minibatch 24,576.
+- Runtime simulator devices are cuda:0 through cuda:3, with seeds 42–45.
+- Every rank loaded max_epochs=1000000 and save_latest_frequency=100.
+- Every rank loaded arm/hand velocity scales 0.03/0.003 and latent penalty 0.
+- Evidence: g1_wuji_runs/991133_sapg_g1_full_1598192/configuration-verification.json.
+- At iteration 36, all 2,895 available TensorBoard scalar values were finite;
+  recent mean compute time was 5.3372 seconds per iteration.
+
+
+2026-10-05: Full G1 tool-set transition (allocation 991133, compute only)
+- G1WujiSonicEnvCfg now uses the original sampling count: 100 samples per
+  shape distribution, 12 distributions, 1,200 objects across hammer,
+  screwdriver, marker, spatula, eraser and brush. The lift task keeps two markers.
+- Full-task integration check: 12 environments (one per distribution), 300
+  finite steps, zero standing falls, measured velocity penalties on the right
+  arm/hand, reward component accounting, and isolated fall/physics-fault reset.
+  Evidence: g1_wuji_runs/991133_sapg_g1_all_tools_1598192/full-task-environment-verification.json
+- Preserved marker checkpoint 566 at 222,560,256 global environment steps.
+  All 172 actor/critic state tensors across four ranks are finite and exactly
+  equal. Full checkpoint and weights-only initialization retained with SHA-256.
+  Evidence: g1_wuji_runs/991133_sapg_g1_all_tools_1598192/initialization/checkpoint-info.json
+- Replaced marker step 991133.99 with full-set step 991133.148: four A6000s,
+  24,576 global envs, 98,304 nominal global minibatch, SAPG + asymmetric critic,
+  1,000,000 iteration ceiling, rolling checkpoint every 100 iterations.
+  Actor/critic weights are reused; optimizer, scaler, simulation, rollout,
+  and iteration counters start fresh. Updated GitHub velocity penalties remain.
+- TensorBoard step 991133.150 binds only 127.0.0.1:6006 and shows both curricula.
+
+- Full-set startup PASSED at iteration 42: all four workers restored actor/critic weights and reached distinct training devices; 3,264 finite TensorBoard scalars across 96 tags. Peak sampled GPU memory [17.63, 16.7, 16.75, 16.7] GiB, host RAM 161.02 GiB; every GPU reached 100% utilization.
+- The TensorBoard HTTP API serves 96 scalar tags for each of marker_lift and full_tools, and preserves the marker checkpoint video.
+- Evidence: g1_wuji_runs/991133_sapg_g1_all_tools_1598192/startup-verification.json and tensorboard-verification.json. Production training continues; no ongoing startup watcher.
+
+2026-10-06 G1 manipulation target smoothing:
+  Seven CPU tests passed (frequency-independent rate limit, convergence,
+  reversal/bounds, and legacy/smoothed checkpoint replay).
+  500 steps over 12 simulated environments: finite states, zero standing
+  falls, right-arm target limit, applied-action history, isolated resets,
+  unchanged rewards, and physics-fault handling passed.
+  Checkpoint 7600 compared over 500 steps x 24 environments per setting:
+  no falls or physics failures; actual right-arm mean speed 1.49 -> 0.42 rad/s.
+  Task reward dropped with the existing policy under slower target dynamics.
+  Full 4-GPU SAPG/asymmetric-critic training resumed checkpoint 7700 in
+  Slurm step 991133.294 with 24576 environments and global minibatch 98304.
+  Startup verified through iteration 7717 with 672 finite TensorBoard scalars.
+  TensorBoard active run: full_tools_smoothed (existing port 6006).
+  Reports: g1_wuji_runs/991133_sapg_g1_all_tools_smoothed_20261006_123802/
+
+GitHub G1/SAPG/smoothing integration verification, 2026-10-06:
+- Combined the cluster changes with GitHub main 4bd490b, retaining the
+  original KUKA/SHARPA and parallel-gripper comparison environments.
+- 23 CPU regression tests passed: action configuration and smoothing,
+  isolated physics-fault handling, all six SAPG exploration groups,
+  LSTM gradients/reset behavior, and checkpoint aliases.
+- Python syntax checked for 20 files, Bash syntax for five launch/setup
+  files, SAPG YAML parsed, and staged diff whitespace checked.
+- G1/SAPG implementation files match the previously validated cluster
+  sources; existing GPU and distributed validation evidence is above.

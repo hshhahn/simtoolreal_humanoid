@@ -12,6 +12,7 @@ def main():
     parser.add_argument("--task", default="Isaacsimenvs-G1-Wuji-Sonic-v0")
     parser.add_argument("--num_envs", type=int, default=4)
     parser.add_argument("--steps", type=int, default=500)
+    parser.add_argument("--smooth_right_arm", action="store_true")
     parser.add_argument(
         "--report", type=Path, default=Path("../.logs/g1-wuji-verification.json")
     )
@@ -43,6 +44,11 @@ def main():
     if args.task == "Isaacsimenvs-G1-Wuji-Sonic-v0":
         cfg.assets.num_assets_per_type = 1
     cfg.seed = 42
+    if args.smooth_right_arm:
+        cfg.sonic.smooth_right_arm_targets = True
+        cfg.action.arm_moving_average = 0.1
+        cfg.action.dof_speed_scale = 1.5
+        cfg.action.hand_moving_average = 0.1
     env = gym.make(args.task, cfg=cfg)
     robot_env = env.unwrapped
     obs, _ = env.reset()
@@ -209,12 +215,56 @@ def main():
         flush=True,
     )
 
+    # Check filtering at the actual motor boundary with a non-standing command.
+    if cfg.sonic.smooth_right_arm_targets:
+        arm_ids = robot_env._reward_arm_joint_ids
+        body_indices = robot_env._right_arm_body_indices
+        before = robot_env._prev_targets[:, arm_ids].clone()
+        robot_env._pre_physics_step(test_action)
+        target = robot_env._cur_targets[:, arm_ids]
+        speed_limit = cfg.action.arm_moving_average * cfg.action.dof_speed_scale
+        assert ((target - before).abs() <= speed_limit * robot_env.step_dt + 1e-6).all()
+        torch.testing.assert_close(
+            robot_env._applied_body_actions[:, body_indices],
+            (target - robot_env._body_defaults[body_indices])
+            / robot_env._body_action_scale[body_indices],
+        )
+        untouched = [i for i in range(29) if i not in body_indices]
+        torch.testing.assert_close(
+            robot_env._applied_body_actions[:, untouched],
+            robot_env._decoded_body_actions[:, untouched],
+            rtol=0, atol=0,
+        )
+        raw_arm_targets = (
+            robot_env._body_defaults[body_indices]
+            + robot_env._decoded_body_actions[:, body_indices]
+            * robot_env._body_action_scale[body_indices]
+        )
+        assert torch.any((raw_arm_targets - target).abs() > 1e-4)
+        torch.testing.assert_close(
+            robot_env._current_sonic_state()["last_action"],
+            robot_env._applied_body_actions, rtol=0, atol=0,
+        )
+        env.reset()
+        assert not robot_env._applied_body_actions.any()
+        print("[G1 test] right-arm rate limit, applied-action history and reset passed", flush=True)
+
     action = robot_env.initial_policy_action.expand(args.num_envs, -1).clone()
     falls = 0
     minimum_height = 10.0
     maximum_drift = 0.0
+    maximum_arm_target_speed = 0.0
     for step in range(args.steps):
+        before_arm = robot_env._prev_targets[:, robot_env._reward_arm_joint_ids].clone()
         obs, reward, terminated, truncated, info = env.step(action)
+        if cfg.sonic.smooth_right_arm_targets:
+            survivors = ~(terminated | truncated)
+            speeds = (
+                robot_env._cur_targets[:, robot_env._reward_arm_joint_ids] - before_arm
+            ).abs()[survivors] / robot_env.step_dt
+            if speeds.numel():
+                maximum_arm_target_speed = max(maximum_arm_target_speed, float(speeds.max()))
+                assert (speeds <= speed_limit + 1e-4).all(), step
         check_current_frame_observation(obs)
         torch.testing.assert_close(reward, info["episode_cumulative"]["total_reward"])
         component_sum = sum(
@@ -304,6 +354,9 @@ def main():
 
     report = {
         "task": args.task,
+        "right_arm_target_smoothing": cfg.sonic.smooth_right_arm_targets,
+        "maximum_right_arm_target_speed_rad_s": maximum_arm_target_speed,
+        "hand_moving_average": cfg.action.hand_moving_average,
         "tabletop_height_m": cfg.reset.table_reset_z + 0.025,
         "minimum_initial_hand_frame_clearance_m": min_clearance,
         "both_hands_initially_over_table": True,

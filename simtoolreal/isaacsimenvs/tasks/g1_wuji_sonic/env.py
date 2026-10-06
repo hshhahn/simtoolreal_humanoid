@@ -9,6 +9,7 @@ import torch
 
 from isaaclab.envs import DirectRLEnv
 
+from simtoolreal_shared.action_smoothing import smooth_arm_targets
 from simtoolreal_shared.physics_guard import (
     invalid_physics_mask,
     mask_invalid_reward_terms,
@@ -68,6 +69,13 @@ class G1WujiSonicEnv(SimToolRealEnv):
             raise ValueError("SONIC G1 task requires a floating base and gravity")
         if cfg.sonic.latent_mode not in ("absolute", "residual"):
             raise ValueError("sonic.latent_mode must be 'absolute' or 'residual'")
+        if cfg.sonic.smooth_right_arm_targets:
+            for name in ("arm_moving_average", "hand_moving_average"):
+                value = getattr(cfg.action, name)
+                if not math.isfinite(value) or not 0.0 < value <= 1.0:
+                    raise ValueError(f"action.{name} must be finite and in (0, 1]")
+            if not math.isfinite(cfg.action.dof_speed_scale) or cfg.action.dof_speed_scale <= 0.0:
+                raise ValueError("action.dof_speed_scale must be finite and positive")
         hand_action = cfg.sonic.initial_hand_action
         if len(hand_action) != 3 or any(
             not math.isfinite(value) or not -1.0 <= value <= 1.0
@@ -118,6 +126,9 @@ class G1WujiSonicEnv(SimToolRealEnv):
             list(RIGHT_ARM_NAMES), preserve_order=True
         )[0]
         self._reward_hand_joint_ids = self._hand_joint_ids
+        self._right_arm_body_indices = [
+            BODY_JOINT_NAMES.index(name) for name in RIGHT_ARM_NAMES
+        ]
         self._left_hand_joint_ids = self.robot.find_joints(
             list(LEFT_HAND_NAMES), preserve_order=True
         )[0]
@@ -156,6 +167,9 @@ class G1WujiSonicEnv(SimToolRealEnv):
             .clone()
         )
         self._decoded_body_actions = torch.zeros(self.num_envs, 29, device=self.device)
+        # SONIC's last_action history must describe the commands actually sent
+        # to the motors, including any manipulation-arm target smoothing.
+        self._applied_body_actions = self._decoded_body_actions.clone()
         # Histories are oldest-to-newest and grouped in deployment YAML order.
         self._sonic_history = {
             name: torch.zeros(self.num_envs, 10, dim, device=self.device)
@@ -182,6 +196,14 @@ class G1WujiSonicEnv(SimToolRealEnv):
             raise ValueError("G1/Wuji requires finite positive simulator velocity limits")
         self._cur_targets[:] = self.robot.data.default_joint_pos
         self._prev_targets[:] = self._cur_targets
+        if cfg.sonic.smooth_right_arm_targets:
+            print(
+                "[G1/Wuji] Right-arm target smoothing: "
+                f"blend={cfg.action.arm_moving_average}, "
+                f"max_target_speed={cfg.action.arm_moving_average * cfg.action.dof_speed_scale} rad/s; "
+                f"hand_blend={cfg.action.hand_moving_average}",
+                flush=True,
+            )
         print(
             f"[G1/Wuji] SONIC 1.1 frozen, FSQ={FSQ_LEVELS} levels; policy=67, robot=69, actor={cfg.observation_space}, critic={cfg.state_space}; mode={cfg.sonic.latent_mode}",
             flush=True,
@@ -203,7 +225,7 @@ class G1WujiSonicEnv(SimToolRealEnv):
             "joint_position": robot.joint_pos[:, self._body_joint_ids]
             - self._body_defaults,
             "joint_velocity": robot.joint_vel[:, self._body_joint_ids],
-            "last_action": self._decoded_body_actions,
+            "last_action": self._applied_body_actions,
             "gravity": robot.projected_gravity_b,
         }
 
@@ -245,6 +267,7 @@ class G1WujiSonicEnv(SimToolRealEnv):
         self.robot.write_root_state_to_sim(root_state, env_ids=ids)
         reset_env_state(self, ids)
         self._decoded_body_actions[ids] = 0.0
+        self._applied_body_actions[ids] = 0.0
         self._meta_actions[ids] = self.initial_policy_action
         self._previous_meta_actions[ids] = self.initial_policy_action
         self._sonic_latent[ids] = quantize_sonic_latent(self._standing_latent)
@@ -294,6 +317,20 @@ class G1WujiSonicEnv(SimToolRealEnv):
         self._cur_targets[:, self._body_joint_ids] = body_targets.clamp(
             min=self._arm_lower, max=self._arm_upper
         )
+        self._applied_body_actions.copy_(self._decoded_body_actions)
+        if self.cfg.sonic.smooth_right_arm_targets:
+            arm_ids = self._reward_arm_joint_ids
+            arm_body_indices = self._right_arm_body_indices
+            self._cur_targets[:, arm_ids] = smooth_arm_targets(
+                self._prev_targets[:, arm_ids],
+                self._cur_targets[:, arm_ids],
+                dt=self.step_dt,
+                speed_scale=self.cfg.action.dof_speed_scale,
+                moving_average=self.cfg.action.arm_moving_average,
+            )
+            self._applied_body_actions[:, arm_body_indices] = (
+                self._cur_targets[:, arm_ids] - self._body_defaults[arm_body_indices]
+            ) / self._body_action_scale[arm_body_indices]
         hand_raw = synergy_targets(commands[:, 64:], self._hand_lower, self._hand_upper)
         alpha = self.cfg.action.hand_moving_average
         self._cur_targets[:, self._hand_joint_ids] = torch.lerp(

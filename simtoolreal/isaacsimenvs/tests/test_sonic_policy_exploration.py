@@ -69,6 +69,55 @@ class SonicPolicyExplorationTest(unittest.TestCase):
         loss.backward()
         assert all(torch.isfinite(p.grad).all() for p in model.parameters() if p.grad is not None)
 
+    def test_sapg_initialization_and_gradients_cover_all_six_groups(self):
+        params = yaml.safe_load(
+            (REPO / "isaacsimenvs/cfg/train/G1WujiSonicSAPG.yaml").read_text()
+        )["params"]
+        params["network"].update(
+            initial_mean=self.initial_mean.tolist(),
+            hand_std_init=0.5,
+            bounded_hand_mean=True,
+        )
+        ids = torch.linspace(50, 0, 6)
+        model = ModelBuilder().load(params).build({
+            "actions_num": 67, "input_shape": (433,), "num_seqs": 6,
+            "value_size": 1, "normalize_value": False, "normalize_input": False,
+            "type": "extra_param", "coef_ids": ids, "coef_id_idx": 432,
+        })
+        self.assertEqual(model.a2c_network.sigma.shape, (6, 67))
+        torch.testing.assert_close(
+            model.a2c_network.sigma[:, :64], torch.full((6, 64), -2.0)
+        )
+        torch.testing.assert_close(
+            model.a2c_network.sigma[:, 64:].exp(), torch.full((6, 3), 0.5)
+        )
+        with torch.no_grad():
+            model.a2c_network.mu.weight.zero_()
+            # Distinct rows prove that the conditioning selects each group.
+            model.a2c_network.sigma[:, 64:] += torch.arange(6)[:, None] * 0.05
+        obs = torch.randn(96, 433)
+        obs[:, 432] = ids.repeat_interleave(16)
+        inputs = {
+            "obs": obs, "rnn_states": model.get_default_rnn_state(),
+            "seq_length": 16,
+        }
+        sampled = model({**inputs, "is_train": False})
+        torch.testing.assert_close(
+            sampled["mus"], self.initial_mean.expand(96, -1)
+        )
+        expected_std = model.a2c_network.sigma[:, 64:].exp().repeat_interleave(16, 0)
+        torch.testing.assert_close(sampled["sigmas"][:, 64:], expected_std)
+        trained = model({
+            **inputs, "is_train": True,
+            "prev_actions": sampled["actions"].detach(),
+        })
+        torch.testing.assert_close(trained["prev_neglogp"], sampled["neglogpacs"])
+        (trained["prev_neglogp"].mean() - 0.01 * trained["entropy"].mean()).backward()
+        self.assertTrue(all(
+            torch.isfinite(p.grad).all() for p in model.parameters() if p.grad is not None
+        ))
+        self.assertTrue((model.a2c_network.sigma.grad.abs().sum(dim=1) > 0).all())
+
     def test_old_configuration_keeps_original_distribution(self):
         legacy = self.build(improved=False)
         with torch.no_grad():

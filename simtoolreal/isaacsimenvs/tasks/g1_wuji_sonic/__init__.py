@@ -20,6 +20,9 @@ gym.register(
         "rl_games_lstm_cfg_entry_point": str(
             Path(__file__).resolve().parents[2] / "cfg/train/G1WujiSonicLSTMPPO.yaml"
         ),
+        "rl_games_sapg_cfg_entry_point": str(
+            Path(__file__).resolve().parents[2] / "cfg/train/G1WujiSonicSAPG.yaml"
+        ),
     },
 )
 
@@ -35,6 +38,9 @@ gym.register(
         ),
         "rl_games_lstm_cfg_entry_point": str(
             Path(__file__).resolve().parents[2] / "cfg/train/G1WujiSonicLSTMPPO.yaml"
+        ),
+        "rl_games_sapg_cfg_entry_point": str(
+            Path(__file__).resolve().parents[2] / "cfg/train/G1WujiSonicSAPG.yaml"
         ),
     },
 )

@@ -2,6 +2,9 @@
 # Source this file to activate SimToolReal and enter the repository.
 _simtoolreal_workspace="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export SIMTOOLREAL_ROOT="${_simtoolreal_workspace}/simtoolreal"
+if [[ -x "${_simtoolreal_workspace}/.tools/uv/uv" ]]; then
+    export PATH="${_simtoolreal_workspace}/.tools/uv:${PATH}"
+fi
 if [[ ! -f "${SIMTOOLREAL_ROOT}/.venv_isaacsim/bin/activate" ]]; then
     printf 'SimToolReal environment is missing. Run setup_simtoolreal.sh first.\n' >&2
     return 1 2>/dev/null || exit 1

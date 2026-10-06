@@ -98,7 +98,7 @@ class CentralValueTrain(nn.Module):
             # total number of GPUs across all nodes
             self.world_size = int(os.getenv("WORLD_SIZE", "1"))
 
-            self.device_name = 'cuda:' + str(self.local_rank)
+            self.device_name = self.ppo_device
             config['device'] = self.device_name
 
             if self.global_rank != 0:

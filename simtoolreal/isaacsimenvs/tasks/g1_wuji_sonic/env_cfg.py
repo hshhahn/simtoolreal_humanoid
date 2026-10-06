@@ -38,6 +38,10 @@ class SonicCfg:
     # Continuous [-1, 1] policy outputs are snapped to the native FSQ grid.
     latent_mode: str = "absolute"  # absolute | residual (around standing reference)
     residual_scale: float = 0.25
+    # Opt in so saved configurations from unsmoothed runs retain their behavior.
+    # Uses action.arm_moving_average and action.dof_speed_scale on the seven
+    # manipulation-arm joints only; SONIC's remaining body outputs stay direct.
+    smooth_right_arm_targets: bool = False
     # Independent exploration for the three normalized Wuji commands. Body
     # log-std remains the PPO default (-2); no noise is added inside the decoder.
     policy_hand_std_init: float = 0.5
@@ -73,7 +77,8 @@ class G1AssetsCfg(AssetsCfg):
     robot_capsule_collisions: bool = True
     robot_max_depenetration_velocity: float = 1.0
     robot_solver_velocity_iterations: int = 4
-    num_assets_per_type: int = 2
+    # Full SimToolReal pool: 100 samples for each of 12 shape distributions.
+    num_assets_per_type: int = 100
     robot_friction: float = 0.8
 
 

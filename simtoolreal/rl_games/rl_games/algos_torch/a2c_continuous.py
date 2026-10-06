@@ -218,8 +218,10 @@ class A2CAgent(a2c_common.ContinuousA2CBase):
             extras = {
                 "on_policy_contrib" : contrib.mean().item(),
                 "off_policy_contrib" : 0,
-                "on_policy_grads" : all_grads.detach().cpu(),
-                "off_policy_grads" : torch.zeros_like(all_grads).cpu(),
+                # Gradient diagnostics require separate on/off backward
+                # passes. Avoid copies and placeholder vectors when disabled.
+                "on_policy_grads" : None,
+                "off_policy_grads" : None,
             }     
         if self.expl_type.startswith('mixed_expl'):
             bl_ids = self.intr_reward_coef_embd[::self.intr_coef_block_size, 0].reshape(-1,1)
