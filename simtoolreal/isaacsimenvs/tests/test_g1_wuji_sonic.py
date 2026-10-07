@@ -13,6 +13,9 @@ def main():
     parser.add_argument("--num_envs", type=int, default=4)
     parser.add_argument("--steps", type=int, default=500)
     parser.add_argument("--smooth_right_arm", action="store_true")
+    parser.add_argument("--arm_blend", type=float, default=0.1)
+    parser.add_argument("--hand_blend", type=float, default=0.1)
+    parser.add_argument("--arm_speed_scale", type=float, default=1.5)
     parser.add_argument(
         "--report", type=Path, default=Path("../.logs/g1-wuji-verification.json")
     )
@@ -50,9 +53,9 @@ def main():
     cfg.seed = 42
     if args.smooth_right_arm:
         cfg.sonic.smooth_right_arm_targets = True
-        cfg.action.arm_moving_average = 0.1
-        cfg.action.dof_speed_scale = 1.5
-        cfg.action.hand_moving_average = 0.1
+        cfg.action.arm_moving_average = args.arm_blend
+        cfg.action.dof_speed_scale = args.arm_speed_scale
+        cfg.action.hand_moving_average = args.hand_blend
     env = gym.make(args.task, cfg=cfg)
     robot_env = env.unwrapped
     obs, _ = env.reset()

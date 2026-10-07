@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import math
 import os
 import sys
 from pathlib import Path
@@ -50,6 +51,10 @@ def main() -> None:
     parser.add_argument("--deterministic", action="store_true", help="Use deterministic policy (mean)")
     parser.add_argument("--sapg_coefficient", type=float, help="Evaluate one SAPG coefficient in all environments")
     parser.add_argument("--all_tools_grid", action="store_true", help="Record one representative environment for each procedural tool family")
+    parser.add_argument(
+        "--checkpoint_tolerance", type=float, default=None,
+        help="Recorded training success tolerance; overrides both replay tolerances when supplied.",
+    )
 
     parser.add_argument(
         "--goal_mode",
@@ -57,6 +62,10 @@ def main() -> None:
         help="Override env_cfg.peg_in_hole.goal_mode before instantiation (e.g. 'dense').",
     )
     my_args = parser.parse_args()
+    if my_args.checkpoint_tolerance is not None and (
+        not math.isfinite(my_args.checkpoint_tolerance) or my_args.checkpoint_tolerance <= 0
+    ):
+        parser.error("--checkpoint_tolerance must be finite and positive")
 
     from isaaclab.app import AppLauncher
 
@@ -84,11 +93,17 @@ def main() -> None:
     if my_args.saved_config:
         import yaml
         from simtoolreal_shared.action_smoothing import restore_g1_smoothing_config
+        from simtoolreal_shared.height_sampling import restore_g1_height_config
 
         saved_environment = yaml.safe_load(my_args.saved_config.read_text()).get("env", {})
         restore_g1_smoothing_config(env_cfg, saved_environment)
+        restore_g1_height_config(env_cfg, saved_environment)
     env_cfg.scene.num_envs = my_args.num_envs
     env_cfg.seed = my_args.seed
+    if my_args.checkpoint_tolerance is not None:
+        env_cfg.termination.success_tolerance = my_args.checkpoint_tolerance
+        env_cfg.termination.eval_success_tolerance = my_args.checkpoint_tolerance
+        print(f"[play_video] Recorded goal tolerance: {my_args.checkpoint_tolerance}", flush=True)
     if not 0 <= my_args.env_idx < my_args.num_envs:
         raise ValueError("env_idx must select an existing environment")
     if my_args.goal_mode is not None and hasattr(env_cfg, "peg_in_hole"):
@@ -196,7 +211,6 @@ def main() -> None:
     agent_cfg["params"]["config"]["multi_gpu"] = False
     if hasattr(env, "configure_agent"):
         env.configure_agent(agent_cfg)
-    import math
 
     clip_obs = float(agent_cfg["params"]["env"].get("clip_observations", math.inf))
     clip_actions = float(agent_cfg["params"]["env"].get("clip_actions", math.inf))

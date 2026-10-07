@@ -19,8 +19,8 @@ def _scale_workspace_bounds(
 
 
 def sample_absolute_goal_pose(
-    mins: tuple[float, float, float],
-    maxs: tuple[float, float, float],
+    mins: tuple[float, float, float] | torch.Tensor,
+    maxs: tuple[float, float, float] | torch.Tensor,
     scale: float,
     n_envs: int,
     device: torch.device,
@@ -38,8 +38,8 @@ def sample_delta_goal_pose(
     prev_quat_wxyz: torch.Tensor,         # (N, 4)
     delta_distance: float,
     delta_rotation_degrees: float,
-    mins: tuple[float, float, float],
-    maxs: tuple[float, float, float],
+    mins: tuple[float, float, float] | torch.Tensor,
+    maxs: tuple[float, float, float] | torch.Tensor,
     scale: float,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Perturb the previous goal by a bounded random walk."""

@@ -379,6 +379,8 @@ class ResetCfg:
     table_reset_z: float = 0.38
     table_reset_z_range: float = 0.01
     table_object_z_offset: float = 0.25
+    # Upper tabletop face relative to its rigid-object root.
+    table_surface_z_offset: float = 0.0
     table_reset_center_xy: tuple[float, float] = (0.0, 0.0)
     # Per-env XY position noise applied at reset (uniform half-widths in m).
     # Default (0, 0) keeps the table centered on the env origin (legacy behavior).
@@ -389,6 +391,9 @@ class ResetCfg:
 
     # Goal sampling
     goal_sampling_type: str = "delta"  # "delta" | "absolute"
+    # Opt in for per-env goal floors following randomized table heights.
+    goal_z_relative_to_table: bool = False
+    goal_table_clearance: float = 0.025
     delta_goal_distance: float = 0.1
     delta_rotation_degrees: float = 90.0
     target_volume_mins: tuple[float, float, float] = (-0.35, -0.2, 0.6)

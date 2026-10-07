@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 
 from isaaclab.utils.math import random_orientation
+from simtoolreal_shared.height_sampling import table_relative_goal_bounds
 
 from .action_utils import sample_log_uniform
 from .goal_sampling import sample_absolute_goal_pose, sample_delta_goal_pose
@@ -134,7 +135,7 @@ def allocate_state_buffers(
         (env.num_envs,), init_z, device=env.device
     )
 
-    # --- Per-env table surface z (randomized in _reset_table_pose) ---
+    # --- Per-env table rigid-root z (randomized in _reset_table_pose) ---
     env._table_z_per_env = torch.full(
         (env.num_envs,), env.cfg.reset.table_reset_z, device=env.device
     )
@@ -353,6 +354,14 @@ def _reset_goal_pose(env, env_ids: torch.Tensor, mode: str) -> None:
         env.goal_viz.write_root_pose_to_sim(pose, env_ids=env_ids)
         return
 
+    mins, maxs, scale = cfg.target_volume_mins, cfg.target_volume_maxs, cfg.target_volume_region_scale
+    if cfg.goal_z_relative_to_table:
+        mins, maxs = table_relative_goal_bounds(
+            mins, maxs, scale, env._table_z_per_env[env_ids],
+            cfg.table_surface_z_offset, cfg.goal_table_clearance,
+        )
+        scale = 1.0  # The helper has already scaled and intersected the volume.
+
     if mode == "delta":
         prev_pos_local = env.goal_viz.data.root_pos_w[env_ids] - env_origins
         prev_quat = env.goal_viz.data.root_quat_w[env_ids]
@@ -361,15 +370,15 @@ def _reset_goal_pose(env, env_ids: torch.Tensor, mode: str) -> None:
             prev_quat_wxyz=prev_quat,
             delta_distance=cfg.delta_goal_distance,
             delta_rotation_degrees=cfg.delta_rotation_degrees,
-            mins=cfg.target_volume_mins,
-            maxs=cfg.target_volume_maxs,
-            scale=cfg.target_volume_region_scale,
+            mins=mins,
+            maxs=maxs,
+            scale=scale,
         )
     elif mode == "absolute":
         new_pos_local, new_quat = sample_absolute_goal_pose(
-            mins=cfg.target_volume_mins,
-            maxs=cfg.target_volume_maxs,
-            scale=cfg.target_volume_region_scale,
+            mins=mins,
+            maxs=maxs,
+            scale=scale,
             n_envs=n,
             device=env.device,
         )

@@ -323,3 +323,31 @@ G1 two-hand full-tool SAPG verification, 2026-10-06:
   roughly 28 GiB host RAM remained available after scene initialization.
   The local monitor can reduce environment counts if memory requires it;
   its state and resource records remain in the local workspace.
+
+2026-10-07: Preserve gentle right-hand G1 SAPG behavior and best checkpoints
+----------------------------------------------------------------------------
+- Integrated height randomization and gentle preset into latest main while
+  preserving upstream bimanual G1 and parallel-gripper buffer support.
+- Presets: 4 GPUs, 30,720 environments, global nominal minibatch 98,304, seed 42,
+  full 1,200-object pool, arm EMA 0.3 / speed_scale 5.0, hand EMA 0.3.
+- Original-height and height145 runs started fresh. All 33 source hashes for
+  each run matched the launch manifest and retained source copies.
+- Public playback accepts optional --checkpoint_tolerance and rebases bundled
+  G1 tabletop paths to the current checkout. Historical object-Z < 0.10 m
+  termination remains in the recorded height task.
+- Candidate validation: 44 CPU tests passed (27 shared helpers, 3 physics guard,
+  4 single-hand exploration, 2 LSTM, 3 bimanual, 5 checkpoint aliases).
+  Eleven Python syntax checks, tabletop XML parse, tolerance CLI validation,
+  and git diff --check passed. The gentle Slurm preset passed bash -n.
+- Prior physical validation and the completed best-checkpoint renders remain
+  in the archive. Both six-tool renders contain 750 frames at 25 FPS (30 s, 1x);
+  both TensorBoard GIF responses were fetched and matched their file hashes.
+- Retained best checkpoints: original epoch 3870, 1,902,182,400 steps,
+  SHA256 d4a3f739f6b0c1bebd2c550cf92721b584fc9e997ca6380681f6557c85ec880b;
+  height epoch 5583, 2,744,156,160 steps,
+  SHA256 8bc6eddc5c35dfb0cbb83370a6c11086e58c79b85d71250304e32a1e18ec636c.
+- Shared-storage archive checkpoints/g1_gentle_best_20261007: 120 hashed
+  payload files, 3,689,037,326 bytes, independent read-only checkpoints,
+  all rank configs, frozen SONIC 1.1, launch provenance and reference videos.
+- Details and replay/fine-tuning commands:
+  docs/reproductions/g1_gentle_20261007.md.

@@ -1,0 +1,248 @@
+{
+  "recorded_date": "2026-10-07",
+  "selection": "Best saved training mean episode reward at rendering time",
+  "archive_relative_path": "checkpoints/g1_gentle_best_20261007",
+  "published_code": "The commit containing this manifest; archive code-publication.json pins its SHA",
+  "runs": {
+    "full": {
+      "task": "Isaacsimenvs-G1-Wuji-Sonic-v0",
+      "epoch": 3870,
+      "frame": 1902182400,
+      "best_training_reward": 5712.9375,
+      "checkpoint_sha256": "d4a3f739f6b0c1bebd2c550cf92721b584fc9e997ca6380681f6557c85ec880b",
+      "checkpoint_saved_at": "2026-10-07T03:43:32.260474-04:00",
+      "checkpoint_success_tolerance": 0.039858076721429825,
+      "effective_keypoint_tolerance_m": 0.05978711508214474,
+      "seed": 42,
+      "num_envs": 96,
+      "steps": 1500,
+      "video_fps": 25,
+      "capture_stride": 2,
+      "duration_s": 30.0,
+      "playback_speed": 1.0,
+      "deterministic": true,
+      "sapg_coefficient": 0.0,
+      "archive_subdirectory": "original_heights_epoch_3870",
+      "training_settings": {
+        "algorithm": "SAPG",
+        "asymmetric_critic": true,
+        "initialization": "scratch",
+        "world_size": 4,
+        "global_environments": 30720,
+        "environments_per_rank": 7680,
+        "global_nominal_minibatch": 98304,
+        "nominal_minibatch_per_rank": 24576,
+        "exploration_groups_per_rank": 6,
+        "exploration_block_per_rank": 1280,
+        "horizon_length": 16,
+        "max_epochs": 1000000,
+        "smoothing": {
+          "smooth_right_arm_targets": true,
+          "arm_moving_average": 0.3,
+          "dof_speed_scale": 5.0,
+          "hand_moving_average": 0.3,
+          "right_arm_target_speed_limit_rad_s": 1.5,
+          "policy_step_s": 0.02,
+          "right_arm_max_target_change_rad": 0.03
+        },
+        "reward": {
+          "arm_velocity_scale": 0.03,
+          "hand_velocity_scale": 0.003,
+          "reward_arm_joints": 7,
+          "reward_hand_joints": 20,
+          "latent_rate_penalty": 0.0
+        },
+        "height_randomization": {
+          "modified": false,
+          "table_upper_surface_range_m": [
+            0.5,
+            0.5
+          ],
+          "table_rigid_root_range_m": [
+            0.475,
+            0.475
+          ],
+          "table_center_xy_m": [
+            0.0,
+            0.25
+          ],
+          "initial_object_center_range_m": [
+            0.565,
+            0.585
+          ],
+          "target_min_z": 0.55,
+          "target_ceiling_m": 0.85,
+          "goal_sampling_type": "delta",
+          "full_reset_goal_sampling": "absolute (fixed pose for marker lift)",
+          "table_height_changes": "full episode reset only",
+          "table_fixed_length_legs": true
+        },
+        "samples_per_shape_distribution": 100,
+        "shape_distributions": 12,
+        "object_pool_size": 1200,
+        "launch_overrides": [
+          "env.assets.num_assets_per_type=100",
+          "env.sonic.smooth_right_arm_targets=true",
+          "env.action.arm_moving_average=0.3",
+          "env.action.dof_speed_scale=5.0",
+          "env.action.hand_moving_average=0.3"
+        ]
+      },
+      "launch_source_sha256": {
+        "activate_simtoolreal.sh": "07b64f319aefa47b8f762ebdf483b4007b70290e7000d7cd71d89b32fc72e1ec",
+        "setup_g1_wuji_sonic.sh": "95173e1189a884b1adec2677538c9cfa9b0e08bea1bc83890905054dd48f21f1",
+        "setup_simtoolreal.sh": "677a497c245731a9771f65925395acf7132c9e8319c6ad0f8d22ba3883457a85",
+        "simtoolreal/assets/urdf/g1_wuji/height_randomized_tabletop.urdf": "2dc01ca8d0c1e74e7dfbf0638961c4a16696ad24c74d9a13cb5528e84bffb972",
+        "simtoolreal/assets/urdf/g1_wuji/manipulation_table.urdf": "d66f3e12d7c09878e93c80b555a619122b1b13f01abe40af3af5b6af49e99550",
+        "simtoolreal/isaacsimenvs/cfg/train/G1WujiSonicSAPG.yaml": "4a25d931befc432718e19034577efdd231416c41c54863b0e78508051557bc12",
+        "simtoolreal/isaacsimenvs/play_video.py": "17fbba6bec2bf7182c7211d698312d374843d1f0ca736bde1fe5318147dbd3be",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/__init__.py": "279008fe392280d7dc9ab0a8d4d2a9bc38367943c3b63f6eff0dcd0d92632f3e",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env.py": "50ccc16905c1051534df53a2c94a5ce70bd705f5b5dfe57bf1826eee347cfdf6",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env_cfg.py": "8db82004eabf271589c2da71d4e9876a35adfe78b31a3c4ec58084b62d29d2d9",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/network.py": "38232f7405b815f622aa03538bd326a0d129e97a4073e22005488cf77e79e7dd",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/robot.py": "db20579b0cfc459cc810238233b8d833200f9a5864e7432e46ade033a61f87a8",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/simtoolreal_env_cfg.py": "517c9adc951fbf147a12579bd688ed3ea570f0174a85fc473f874fee0e21f2c1",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/utils/goal_sampling.py": "232e75773accb843a93f2cf775b3d1eba84cf2e982af7451d00c384c3dafb487",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/utils/reset_utils.py": "40063add8253e39844ce48b4b906b0e887e6e25e7f28b9d845feff7916452d33",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/utils/reward_utils.py": "17fe0417d74ba5d942ba0f77846db67e4bf325875de64e45dd4062d23bf760d2",
+        "simtoolreal/isaacsimenvs/tests/test_g1_wuji_sonic.py": "f850936c83b2afa6be751a70ff2f8ead45c3297d1ef208539500fd57a0ed0040",
+        "simtoolreal/isaacsimenvs/tests/test_sonic_policy_exploration.py": "5db18eea1845283d239c394d144f2c7d32f1a5bf8cb46351b98d085cb318caf5",
+        "simtoolreal/isaacsimenvs/train.py": "e49f349774513248bd54d2e578fe52047c35f009760fdbac806b3fc14b74d69a",
+        "simtoolreal/isaacsimenvs/utils/distributed.py": "ddda20cb684bce267ab42e15465a82dbdfcb32d18de61d0f2f6a528fc3a170de",
+        "simtoolreal/rl_games/rl_games/algos_torch/a2c_continuous.py": "da89c2464065f5f98e535c338cefb8990cf868167a1e2e9fe943ac45c9ac85c4",
+        "simtoolreal/rl_games/rl_games/algos_torch/central_value.py": "6077b86f288f6cd224502de9ebf9c8911510a45212d83ea6dd9a576ee5edf26a",
+        "simtoolreal/rl_games/rl_games/common/a2c_common.py": "a2a992e20be32f73ea8789e8e7b2b94078b321fce82a7b8f0f32ab24121b46a7",
+        "simtoolreal/rl_games/rl_games/torch_runner.py": "da770f5e17ac44c5f6b8d3ac199f948041f968ff2cb1705b58e944980c464019",
+        "simtoolreal/simtoolreal_shared/action_smoothing.py": "1d94e1fac9b6f96f1fb33a2138d7c133da5205d595e381e7758029b1f872720b",
+        "simtoolreal/simtoolreal_shared/height_sampling.py": "0e189211948803cad50c25795c10a0a5e021613a35747823e33f5cee8ecc7124",
+        "simtoolreal/simtoolreal_shared/tests/test_action_smoothing.py": "42b3d5b4d167608477ade4eeeacb0d720fde0e9aa3e53eef43f4ab9224e18e7b",
+        "simtoolreal/simtoolreal_shared/tests/test_height_sampling.py": "e92ebd37148fe0ec5160f2b1783f294a780e2681a31332ef8cea73cd2b71ec75",
+        "slurm/monitor_sapg.py": "2c7259f5b623f4f2581939e60bf8ee7dd1846aa0fd828041f6973436ccf27b3e",
+        "slurm/run_sapg.sh": "14d90cb22fe92d6ae23bbde3c7592ecfb7d0e0d9814879029781182ee3fff2a9",
+        "slurm/sapg.sbatch": "6916430adffe721a6cc84ee2d44dd4083567e058620553a26dd82dec2c4fb662",
+        "slurm/sapg_worker.py": "d8af564b639e2bb675853af85426f155f6bdeb565e570324a117f0ecd29ef5e3",
+        "slurm/verify_sapg_run.py": "e0917bb25f8e03a7c8f687c55fed156b79d33caffbdcc3567f56eb995d09ab13"
+      }
+    },
+    "height": {
+      "task": "Isaacsimenvs-G1-Wuji-Sonic-Height-v0",
+      "epoch": 5583,
+      "frame": 2744156160,
+      "best_training_reward": 4135.3740234375,
+      "checkpoint_sha256": "8bc6eddc5c35dfb0cbb83370a6c11086e58c79b85d71250304e32a1e18ec636c",
+      "checkpoint_saved_at": "2026-10-07T09:09:05.452794-04:00",
+      "checkpoint_success_tolerance": 0.039858076721429825,
+      "effective_keypoint_tolerance_m": 0.05978711508214474,
+      "seed": 42,
+      "num_envs": 96,
+      "steps": 1500,
+      "video_fps": 25,
+      "capture_stride": 2,
+      "duration_s": 30.0,
+      "playback_speed": 1.0,
+      "deterministic": true,
+      "sapg_coefficient": 0.0,
+      "archive_subdirectory": "randomized_heights_epoch_5583",
+      "training_settings": {
+        "algorithm": "SAPG",
+        "asymmetric_critic": true,
+        "initialization": "scratch",
+        "world_size": 4,
+        "global_environments": 30720,
+        "environments_per_rank": 7680,
+        "global_nominal_minibatch": 98304,
+        "nominal_minibatch_per_rank": 24576,
+        "exploration_groups_per_rank": 6,
+        "exploration_block_per_rank": 1280,
+        "horizon_length": 16,
+        "max_epochs": 1000000,
+        "smoothing": {
+          "smooth_right_arm_targets": true,
+          "arm_moving_average": 0.3,
+          "dof_speed_scale": 5.0,
+          "hand_moving_average": 0.3,
+          "right_arm_target_speed_limit_rad_s": 1.5,
+          "policy_step_s": 0.02,
+          "right_arm_max_target_change_rad": 0.03
+        },
+        "reward": {
+          "arm_velocity_scale": 0.03,
+          "hand_velocity_scale": 0.003,
+          "reward_arm_joints": 7,
+          "reward_hand_joints": 20,
+          "latent_rate_penalty": 0.0
+        },
+        "height_randomization": {
+          "modified": true,
+          "table_upper_surface_range_m": [
+            0.05,
+            0.51
+          ],
+          "table_rigid_root_range_m": [
+            0.025,
+            0.485
+          ],
+          "table_center_xy_m": [
+            0.0,
+            0.2
+          ],
+          "initial_object_center_range_m": [
+            0.115,
+            0.595
+          ],
+          "target_min_z": "own tabletop upper face + 0.025 m",
+          "target_ceiling_m": 1.45,
+          "goal_sampling_type": "delta",
+          "full_reset_goal_sampling": "absolute (fixed pose for marker lift)",
+          "table_height_changes": "full episode reset only",
+          "table_fixed_length_legs": false
+        },
+        "samples_per_shape_distribution": 100,
+        "shape_distributions": 12,
+        "object_pool_size": 1200,
+        "launch_overrides": [
+          "env.assets.num_assets_per_type=100",
+          "env.sonic.smooth_right_arm_targets=true",
+          "env.action.arm_moving_average=0.3",
+          "env.action.dof_speed_scale=5.0",
+          "env.action.hand_moving_average=0.3"
+        ]
+      },
+      "launch_source_sha256": {
+        "activate_simtoolreal.sh": "07b64f319aefa47b8f762ebdf483b4007b70290e7000d7cd71d89b32fc72e1ec",
+        "setup_g1_wuji_sonic.sh": "95173e1189a884b1adec2677538c9cfa9b0e08bea1bc83890905054dd48f21f1",
+        "setup_simtoolreal.sh": "677a497c245731a9771f65925395acf7132c9e8319c6ad0f8d22ba3883457a85",
+        "simtoolreal/assets/urdf/g1_wuji/height_randomized_tabletop.urdf": "2dc01ca8d0c1e74e7dfbf0638961c4a16696ad24c74d9a13cb5528e84bffb972",
+        "simtoolreal/assets/urdf/g1_wuji/manipulation_table.urdf": "d66f3e12d7c09878e93c80b555a619122b1b13f01abe40af3af5b6af49e99550",
+        "simtoolreal/isaacsimenvs/cfg/train/G1WujiSonicSAPG.yaml": "4a25d931befc432718e19034577efdd231416c41c54863b0e78508051557bc12",
+        "simtoolreal/isaacsimenvs/play_video.py": "17fbba6bec2bf7182c7211d698312d374843d1f0ca736bde1fe5318147dbd3be",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/__init__.py": "279008fe392280d7dc9ab0a8d4d2a9bc38367943c3b63f6eff0dcd0d92632f3e",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env.py": "50ccc16905c1051534df53a2c94a5ce70bd705f5b5dfe57bf1826eee347cfdf6",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/env_cfg.py": "8db82004eabf271589c2da71d4e9876a35adfe78b31a3c4ec58084b62d29d2d9",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/network.py": "38232f7405b815f622aa03538bd326a0d129e97a4073e22005488cf77e79e7dd",
+        "simtoolreal/isaacsimenvs/tasks/g1_wuji_sonic/robot.py": "db20579b0cfc459cc810238233b8d833200f9a5864e7432e46ade033a61f87a8",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/simtoolreal_env_cfg.py": "517c9adc951fbf147a12579bd688ed3ea570f0174a85fc473f874fee0e21f2c1",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/utils/goal_sampling.py": "232e75773accb843a93f2cf775b3d1eba84cf2e982af7451d00c384c3dafb487",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/utils/reset_utils.py": "40063add8253e39844ce48b4b906b0e887e6e25e7f28b9d845feff7916452d33",
+        "simtoolreal/isaacsimenvs/tasks/simtoolreal/utils/reward_utils.py": "17fe0417d74ba5d942ba0f77846db67e4bf325875de64e45dd4062d23bf760d2",
+        "simtoolreal/isaacsimenvs/tests/test_g1_wuji_sonic.py": "f850936c83b2afa6be751a70ff2f8ead45c3297d1ef208539500fd57a0ed0040",
+        "simtoolreal/isaacsimenvs/tests/test_sonic_policy_exploration.py": "5db18eea1845283d239c394d144f2c7d32f1a5bf8cb46351b98d085cb318caf5",
+        "simtoolreal/isaacsimenvs/train.py": "e49f349774513248bd54d2e578fe52047c35f009760fdbac806b3fc14b74d69a",
+        "simtoolreal/isaacsimenvs/utils/distributed.py": "ddda20cb684bce267ab42e15465a82dbdfcb32d18de61d0f2f6a528fc3a170de",
+        "simtoolreal/rl_games/rl_games/algos_torch/a2c_continuous.py": "da89c2464065f5f98e535c338cefb8990cf868167a1e2e9fe943ac45c9ac85c4",
+        "simtoolreal/rl_games/rl_games/algos_torch/central_value.py": "6077b86f288f6cd224502de9ebf9c8911510a45212d83ea6dd9a576ee5edf26a",
+        "simtoolreal/rl_games/rl_games/common/a2c_common.py": "a2a992e20be32f73ea8789e8e7b2b94078b321fce82a7b8f0f32ab24121b46a7",
+        "simtoolreal/rl_games/rl_games/torch_runner.py": "da770f5e17ac44c5f6b8d3ac199f948041f968ff2cb1705b58e944980c464019",
+        "simtoolreal/simtoolreal_shared/action_smoothing.py": "1d94e1fac9b6f96f1fb33a2138d7c133da5205d595e381e7758029b1f872720b",
+        "simtoolreal/simtoolreal_shared/height_sampling.py": "0e189211948803cad50c25795c10a0a5e021613a35747823e33f5cee8ecc7124",
+        "simtoolreal/simtoolreal_shared/tests/test_action_smoothing.py": "42b3d5b4d167608477ade4eeeacb0d720fde0e9aa3e53eef43f4ab9224e18e7b",
+        "simtoolreal/simtoolreal_shared/tests/test_height_sampling.py": "e92ebd37148fe0ec5160f2b1783f294a780e2681a31332ef8cea73cd2b71ec75",
+        "slurm/monitor_sapg.py": "2c7259f5b623f4f2581939e60bf8ee7dd1846aa0fd828041f6973436ccf27b3e",
+        "slurm/run_sapg.sh": "14d90cb22fe92d6ae23bbde3c7592ecfb7d0e0d9814879029781182ee3fff2a9",
+        "slurm/sapg.sbatch": "6916430adffe721a6cc84ee2d44dd4083567e058620553a26dd82dec2c4fb662",
+        "slurm/sapg_worker.py": "d8af564b639e2bb675853af85426f155f6bdeb565e570324a117f0ecd29ef5e3",
+        "slurm/verify_sapg_run.py": "e0917bb25f8e03a7c8f687c55fed156b79d33caffbdcc3567f56eb995d09ab13"
+      }
+    }
+  }
+}

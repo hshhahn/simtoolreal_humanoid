@@ -202,3 +202,35 @@ class G1WujiSonicBimanualEnvCfg(G1WujiSonicEnvCfg):
     reset: ResetCfg = G1WujiSonicEnvCfg().reset.replace(
         reset_position_center_xy=(0.0, 0.30), reset_position_noise_x=0.23
     )
+
+
+@configclass
+class G1HeightAssetsCfg(G1AssetsCfg):
+    table_urdf: str = str(REPO / "assets/urdf/g1_wuji/height_randomized_tabletop.urdf")
+
+
+@configclass
+class G1WujiSonicHeightEnvCfg(G1WujiSonicEnvCfg):
+    """Full tool pool with episode-wise initial heights and table-relative goals."""
+
+    assets: G1HeightAssetsCfg = G1HeightAssetsCfg()
+    reset: ResetCfg = G1WujiSonicEnvCfg().reset.replace(
+        # Upper surfaces: 0.05--0.51 m. The lowest standing finger geometry
+        # is ~0.534 m, so even the highest table leaves >2 cm clearance.
+        # Root bounds = surface bounds minus half the 5 cm slab thickness.
+        table_reset_z=0.255,
+        table_reset_z_range=0.23,
+        # Move 5 cm forward: the lowest slab otherwise overlaps standing toes.
+        table_reset_center_xy=(0.0, 0.20),
+        table_surface_z_offset=0.025,
+        # Retain the drop gap and small vertical jitter; centers start at
+        # 0.115--0.595 m, below the ~0.672 m initial right palm.
+        table_object_z_offset=0.10,
+        goal_z_relative_to_table=True,
+        goal_table_clearance=0.025,
+        # Retain the original delta updates after success; resets sample the full volume.
+        goal_sampling_type="delta",
+        target_volume_mins=(-0.30, 0.14, 0.0),
+        # User-selected 1.45 m ceiling (geometric arm-only palm reach ~1.536 m).
+        target_volume_maxs=(0.30, 0.40, 1.45),
+    )

@@ -46,6 +46,35 @@ sbatch --partition=fang --account=fang --gres=gpu:nvidia_rtx_a6000:1 \
 These submission commands request new allocations and may queue while
 `991133` holds its GPUs. No long training jobs were submitted during setup.
 
+## Recorded gentle G1 runs
+
+The 2026-10-06 runs use 30,720 global environments (7,680 per GPU), a
+98,304 nominal global minibatch, SAPG with an asymmetric critic, seed 42,
+and fresh task-policy initialization. Both enable right-arm smoothing with
+arm EMA 0.3, speed scale 5.0, and hand EMA 0.3. The arm-target speed cap is
+1.5 rad/s at 50 Hz. The full 1,200-object pool is retained.
+
+From the repository root, dispatch a new run to a four-GPU allocation:
+
+```bash
+srun --jobid=YOUR_JOB_ID --overlap --exact --nodes=1 --ntasks=1 \
+  --cpus-per-task=32 --gpus-per-task=4 --gpu-bind=none \
+  env RUN_DIR=/shared/path/to/a/fresh/run \
+  bash slurm/run_g1_gentle.sh original
+```
+
+Use `height145` in place of `original` for
+`Isaacsimenvs-G1-Wuji-Sonic-Height-v0`. Its table surface ranges from
+0.05 to 0.51 m; goals range from the sampled tabletop + 0.025 m to 1.45 m.
+Both presets start from scratch unless checkpoint arguments are explicitly
+passed. `GPUS`, `NUM_ENVS`, `MINIBATCH_SIZE`, `MAX_EPOCHS`, and `SEED`
+can override the preset defaults.
+
+See [the experiment record](docs/reproductions/g1_gentle_20261007.md)
+for the two preserved best checkpoints, exact source provenance, known
+height-task behavior, and replay/resume commands. Earlier run descriptions
+below are historical records.
+
 ## Distributed G1 SAPG
 
 `slurm/run_sapg.sh` launches four `torchrun` ranks. Each rank runs G1 physics

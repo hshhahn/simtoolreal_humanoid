@@ -7,17 +7,18 @@ from simtoolreal_shared.action_smoothing import smooth_arm_targets
 
 
 @pytest.mark.parametrize("frequency", [50, 60, 120])
-def test_target_speed_limit_does_not_depend_on_controller_frequency(frequency):
+@pytest.mark.parametrize("blend,speed_scale", [(0.1, 1.5), (0.3, 5.0)])
+def test_target_speed_limit_does_not_depend_on_controller_frequency(frequency, blend, speed_scale):
     previous = torch.zeros(4, 7, dtype=torch.float64)
     requested = torch.full_like(previous, 10.0)
     for _ in range(frequency):
         updated = smooth_arm_targets(
             previous, requested, dt=1 / frequency,
-            speed_scale=1.5, moving_average=0.1,
+            speed_scale=speed_scale, moving_average=blend,
         )
-        assert ((updated - previous).abs() <= 0.15 / frequency + 1e-12).all()
+        assert ((updated - previous).abs() <= blend * speed_scale / frequency + 1e-12).all()
         previous = updated
-    torch.testing.assert_close(previous, torch.full_like(previous, 0.15))
+    torch.testing.assert_close(previous, torch.full_like(previous, blend * speed_scale))
 
 
 def test_nearby_targets_converge_without_overshoot():

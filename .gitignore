@@ -10,6 +10,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 models/
+checkpoints/
 third_party/
 g1_wuji_runs/
 kuka_gripper_runs/

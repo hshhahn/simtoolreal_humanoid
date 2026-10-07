@@ -63,16 +63,31 @@ The complete settings are in [env_cfg.py](simtoolreal/isaacsimenvs/tasks/g1_wuji
 
 ## Manipulation target smoothing
 
-Enable dex-hand-style limits with these Hydra overrides:
+The recorded single-hand runs use gentler right-arm smoothing with the
+original hand EMA:
 
     env.sonic.smooth_right_arm_targets=true
-    env.action.arm_moving_average=0.1
-    env.action.dof_speed_scale=1.5
-    env.action.hand_moving_average=0.1
+    env.action.arm_moving_average=0.3
+    env.action.dof_speed_scale=5.0
+    env.action.hand_moving_average=0.3
 
-The seven right-arm joint targets approach the decoded SONIC pose with a maximum raw change of 1.5 times the policy timestep, followed by the 0.1 blend. Their effective target speed is limited to 0.15 rad/s (0.003 rad per 50 Hz update). This preserves absolute SONIC pose requests; it does not reinterpret latent coordinates as joint velocities. Finger targets move 10% toward the requested synergy pose each update. Actual joint speeds can exceed target speeds while tracking a command.
+The seven right-arm joint targets approach the decoded SONIC pose with a
+maximum raw change of `5.0 * policy_dt`, followed by the 0.3 blend. At 50 Hz,
+this limits target movement to 0.03 rad per update (1.5 rad/s). Finger targets
+move 30% toward the requested synergy pose each update; their EMA has no
+separate speed cap. Actual joint speeds can exceed target speeds while
+tracking a command.
 
-Leg, waist, and left-arm outputs retain the direct SONIC path. Its last-action history records the filtered right-arm commands actually applied. Smoothing is an explicit run setting and is restored by checkpoint video replay; older saved configurations keep their original unsmoothed arm behavior.
+Leg, waist, and left-arm outputs retain the direct SONIC path. Its last-action
+history records the filtered right-arm commands actually applied. Smoothing
+is an explicit run setting restored by checkpoint video replay. The earlier
+strong preset used arm EMA 0.1, speed scale 1.5, and hand EMA 0.1, giving a
+0.15 rad/s arm-target cap.
+
+Use `slurm/run_g1_gentle.sh original` or
+`slurm/run_g1_gentle.sh height145` inside a four-GPU Slurm step.
+The [recorded experiments and preserved checkpoints](docs/reproductions/g1_gentle_20261007.md)
+document the exact settings, height ranges, and replay commands.
 
 ## Verification and training
 

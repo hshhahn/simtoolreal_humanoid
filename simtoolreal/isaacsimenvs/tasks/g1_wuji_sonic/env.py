@@ -11,6 +11,7 @@ from isaaclab.envs import DirectRLEnv
 from isaaclab.utils.math import convert_quat, quat_apply
 
 from simtoolreal_shared.action_smoothing import smooth_arm_targets
+from simtoolreal_shared.height_sampling import validate_height_reset_config
 from simtoolreal_shared.physics_guard import (
     invalid_physics_mask,
     mask_invalid_reward_terms,
@@ -61,6 +62,7 @@ class G1WujiSonicEnv(SimToolRealEnv):
     def __init__(
         self, cfg: G1WujiSonicEnvCfg, render_mode: str | None = None, **kwargs
     ):
+        validate_height_reset_config(cfg.reset)
         self._bimanual = cfg.sonic.control_both_hands
         expected_actions = 70 if self._bimanual else 67
         if cfg.action_space != expected_actions:
